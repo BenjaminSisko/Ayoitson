@@ -1,5 +1,7 @@
 
 //hmnn this is more of a "PlexServerService"...
+const { getInternalBaseUrl } = require('../lib/url');
+
 const ICON_REGEX = /https?:\/\/.*(\/library\/metadata\/\d+\/thumb\/\d+).X-Plex-Token=.*/;
 
 const ICON_FIELDS = ["icon", "showIcon", "seasonIcon", "episodeIcon"];
@@ -35,7 +37,7 @@ class PlexServerDB
                 channel.fallback = [];
                 if (channel.offlineMode != "pic") {
                     channel.offlineMode = "pic";
-                    channel.offlinePicture = `http://localhost:${process.env.PORT}/images/generic-offline-screen.png`;
+                    channel.offlinePicture = `${getInternalBaseUrl()}/images/generic-offline-screen.png`;
                 }
             }
             this.fixupProgramArray(channel.fallback, name,newServer, channelReport);

@@ -19,6 +19,7 @@
  ***/
 const path = require('path');
 var fs = require('fs');
+const { getInternalBaseUrl } = require('./lib/url');
 
 const TARGET_VERSION = 805;
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -27,7 +28,8 @@ const STEPS = [
     // [v, v2, x] : if the current version is v, call x(db), and version becomes v2
     [      0,    100, (db) => basicDB(db) ],
     [    100,    200, (db) => commercialsRemover(db) ],
-    [    200,    300, (db) => appNameChange(db) ],
+    // Phase 1 cleanup: dropped legacy .pseudotv path migration.
+    [    200,    300, () => undefined ],
     [    300,    400, (db) => createDeviceId(db) ],
     [    400,    500, (db,channels) => splitServersSingleChannels(db, channels) ],
     [    500,    501, (db) => fixCorruptedServer(db) ],
@@ -61,17 +63,6 @@ function createDeviceId(db) {
     }
 }
 
-
-function appNameChange(db) {
-    let xmltv = db['xmltv-settings'].find()
-    if (xmltv.length > 0) {
-        xmltv = xmltv[0];
-        if (typeof(xmltv.file) !== 'undefined') {
-            xmltv.file = xmltv.file.replace(/\.pseudotv/, ".dizquetv");
-            db['xmltv-settings'].update( { "_id" : xmltv._id} , xmltv );
-        }
-    }
-}
 
 function basicDB(db) {
     //this one should either try recovering the db from a very old version
@@ -113,20 +104,7 @@ function basicDB(db) {
             pathReplaceWith: ''
         })
     }
-    let plexServers = db['plex-servers'].find();
-    //plex servers exist, but they could be old
-    let newPlexServers = {};
-    for (let i = 0; i < plexServers.length; i++) {
-        let plex = plexServers[i];
-        if  ( (typeof(plex.connections) === 'undefined') || plex.connections.length==0) {
-            let newPlex = attemptMigratePlexFrom51(plex);
-            newPlexServers[plex.name] = newPlex;
-            db['plex-servers'].update( { _id: plex._id }, newPlex );
-        }
-    }
-    if (Object.keys(newPlexServers).length !== 0) {
-        migrateChannelsFrom51(db, newPlexServers);
-    }
+    // Phase 1 cleanup: legacy pseudotv-plex server/channel recovery was removed.
 
 
     let xmltvSettings = db['xmltv-settings'].find()
@@ -144,136 +122,6 @@ function basicDB(db) {
             autoDiscovery: true
         })
     }
-}
-
-function migrateChannelsFrom51(db, newPlexServers) {
-    console.log("Attempting to migrate channels from old format. This may take a while...");
-    let channels = db['channels'].find();
-    function fix(program) {
-        if (typeof(program.plexFile) === 'undefined') {
-            let file = program.file;
-            program.plexFile = file.slice( program.server.uri.length );
-            let i = 0;
-            while (i < program.plexFile.length && program.plexFile.charAt(i) != '?') {
-                i++;
-            }
-            program.plexFile = program.plexFile.slice(0, i);
-            delete program.file;
-
-        }
-    };
-    for (let i = 0; i < channels.length; i++) {
-        let channel = channels[i];
-        let programs = channel.programs;
-        let newPrograms = [];
-        for (let j = 0; j < programs.length; j++) {
-            let program = programs[j];
-            if (
-                   (typeof(program.server) === 'undefined') || (typeof(program.server.name) === 'undefined')
-                   || ( ( typeof(program.plexFile)==='undefined' ) && ( typeof(program.file)==='undefined' ) )
-            ) {
-                let duration = program.duration;
-                if (typeof(duration) !== 'undefined') {
-                    console.log(`A program in channel ${channel.number} doesn't have server/plex file information. Replacing it with Flex time`);
-                    program = {
-                        isOffline : true,
-                        actualDuration : duration,
-                        duration : duration,
-                    };
-                    newPrograms.push( program );
-                } else {
-                    console.log(`A program in channel ${channel.number} is completely invalid and has been removed.`);
-                }
-            } else {
-                if ( typeof(newPlexServers[program.server.name]) !== 'undefined' ) {
-                    program.server = newPlexServers[program.server.name];
-                } else {
-                    console.log("turns out '" + program.server.name + "' is not in " + JSON.stringify(newPlexServers) );
-                }
-                let commercials = program.commercials;
-                fix(program);
-                if ( (typeof(commercials)==='undefined') || (commercials.length == 0)) {
-                    commercials = [];
-                }
-                let newCommercials = [];
-                for (let k = 0; k < commercials.length; k++) {
-                    let commercial = commercials[k];
-                    if (
-                        (typeof(commercial.server) === 'undefined')
-                        || (typeof(commercial.server.name) === 'undefined')
-                        || ( ( typeof(commercial.plexFile)==='undefined' ) && ( typeof(commercial.file)==='undefined' ) )
-                    ) {
-                        console.log(`A commercial in channel ${channel.number} has invalid server/plex file information and has been removed.`);
-                    } else {
-                        if (typeof(newPlexServers[commercial.server.name]) !== 'undefined') {
-                            commercial.server = newPlexServers[commercial.server.name];
-                        }
-                        fix(commercial);
-       
-                        newCommercials.push(commercial);
-                    }
-                }
-                program.commercials = newCommercials;
-                newPrograms.push(program);
-            }
-        }
-        channel.programs = newPrograms;
-        db.channels.update( { number: channel.number }, channel );
-    }
-
-}
-
-function attemptMigratePlexFrom51(plex) {
-    console.log("Attempting to migrate existing Plex server: " + plex.name + "...");
-    let u = "unknown(migrated from 0.0.51)";
-    //most of the new variables aren't really necessary so it doesn't matter
-    //to replace them with placeholders
-    let uri = plex.protocol + "://" + plex.host + ":" + plex.port;
-    let newPlex = {
-        "name": plex.name,
-        "product": "Plex Media Server",
-        "productVersion": u,
-        "platform": u,
-        "platformVersion": u,
-        "device": u,
-        "clientIdentifier": u,
-        "createdAt": u,
-        "lastSeenAt": u,
-        "provides": "server",
-        "ownerId": null,
-        "sourceTitle": null,
-        "publicAddress": plex.host,
-        "accessToken": plex.token,
-        "owned": true,
-        "home": false,
-        "synced": false,
-        "relay": true,
-        "presence": true,
-        "httpsRequired": true,
-        "publicAddressMatches": true,
-        "dnsRebindingProtection": false,
-        "natLoopbackSupported": false,
-        "connections": [
-            {
-                "protocol": plex.protocol,
-                "address": plex.host,
-                "port": plex.port,
-                "uri":  uri,
-                "local": true,
-                "relay": false,
-                "IPv6": false
-            }
-        ],
-        "uri": uri,
-        "protocol": plex.protocol,
-        "address": plex.host,
-        "port": plex.host,
-        "arGuide": plex.arGuide,
-        "arChannels": plex.arChannels,
-        "_id": plex._id,
-    };
-    console.log("Sucessfully migrated plex server: " + plex.name);
-    return newPlex;
 }
 
 function commercialsRemover(db) {
@@ -332,7 +180,7 @@ function commercialsRemover(db) {
                 console.log("Added provisional fallback to channel #" + channel.number + " " + channel.name + " . You might want to tweak this value in channel configuration.");
                 channel.offlineMode = "pic";
                 channel.fallback = [ ];
-                channel.offlinePicture = `http://localhost:${process.env.PORT}/images/generic-offline-screen.png`
+                channel.offlinePicture = `${getInternalBaseUrl()}/images/generic-offline-screen.png`
                 channel.offlineSoundtrack = ''
             }
             if ( typeof(channel.disableFillerOverlay) === 'undefined' ) {
@@ -500,7 +348,7 @@ function splitServersSingleChannels(db, channelDB ) {
         let key = getServerKey(uri, accessToken);
         if (typeof(serverCache[key]) === 'undefined') {
             serverCache[key] = getNewName(name);
-            console.log(`for key=${key} found server with name=${serverCache[key]}, uri=${uri}, accessToken=${accessToken}` );
+            console.log(`Found Plex server "${serverCache[key]}" at uri=${uri}`);
             newServers.push({
                 name: serverCache[key],
                 uri: uri,
@@ -900,4 +748,7 @@ function fixNonIntegerDurations() {
 module.exports = {
     initDB: initDB,
     defaultFFMPEG: ffmpeg,
+    __test: {
+        splitServersSingleChannels,
+    },
 }
