@@ -5,17 +5,20 @@ function loadUrlHelper() {
 
 describe('getInternalBaseUrl', () => {
   let previousInternalUrl;
+  let previousNodeEnv;
   let previousPort;
   let previousWarn;
   let warnings;
 
   beforeEach(() => {
     previousInternalUrl = process.env.INTERNAL_URL;
+    previousNodeEnv = process.env.NODE_ENV;
     previousPort = process.env.PORT;
     previousWarn = console.warn;
     warnings = [];
 
     delete process.env.INTERNAL_URL;
+    delete process.env.NODE_ENV;
     delete process.env.PORT;
 
     console.warn = (message) => {
@@ -28,6 +31,12 @@ describe('getInternalBaseUrl', () => {
       delete process.env.INTERNAL_URL;
     } else {
       process.env.INTERNAL_URL = previousInternalUrl;
+    }
+
+    if (typeof previousNodeEnv === 'undefined') {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
     }
 
     if (typeof previousPort === 'undefined') {
@@ -79,6 +88,15 @@ describe('getInternalBaseUrl', () => {
     expect(getInternalBaseUrl()).toBe('http://localhost:8123');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('falling back to localhost');
+  });
+
+  test('does not warn about the localhost fallback in production', () => {
+    process.env.NODE_ENV = 'production';
+
+    const { getInternalBaseUrl } = loadUrlHelper();
+
+    expect(getInternalBaseUrl()).toBe('http://localhost:8000');
+    expect(warnings).toEqual([]);
   });
 
   test('uses port 8000 for the localhost fallback when PORT is unset', () => {

@@ -7,6 +7,7 @@ const JSONStream = require('JSONStream');
 const FFMPEGInfo = require('./ffmpeg-info');
 const PlexServerDB = require('./dao/plex-server-db');
 const Plex = require("./plex.js");
+const { v4: uuidv4 } = require('uuid');
 
 const timeSlotsService = require('./services/time-slots-service');
 const randomSlotsService = require('./services/random-slots-service');
@@ -21,6 +22,20 @@ function safeString(object) {
     }
   }
   return String(o);
+}
+
+function hasUnsafeUploadName(name) {
+  return (
+    typeof name !== 'string' ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name.includes('..')
+  );
+}
+
+function createStoredUploadName(originalName) {
+  const extension = path.extname(originalName);
+  return `${uuidv4()}${extension}`;
 }
 
 module.exports = { router: api }
@@ -365,21 +380,39 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
             });
         } else {
             const logo = req.files.image;
-            logo.mv(path.join(process.env.DATABASE, '/images/uploads/', logo.name));
+            const originalName = logo.name;
+
+            if (hasUnsafeUploadName(originalName)) {
+                return res.status(400).send({
+                    status: false,
+                    message: 'Invalid upload filename'
+                });
+            }
+
+            const storedName = createStoredUploadName(originalName);
+            const uploadDir = path.join(process.env.DATABASE, 'images', 'uploads');
+
+            fs.mkdirSync(uploadDir, { recursive: true });
+            await logo.mv(path.join(uploadDir, storedName));
             
             res.send({
                 status: true,
                 message: 'File is uploaded',
                 data: {
-                    name: logo.name,
+                    name: storedName,
+                    originalName,
                     mimetype: logo.mimetype,
                     size: logo.size,
-                    fileUrl: `${req.protocol}://${req.get('host')}/images/uploads/${logo.name}`
+                    fileUrl: `${req.protocol}://${req.get('host')}/images/uploads/${storedName}`
                 }
             });
         }
       } catch (err) {
-          res.status(500).send(err);
+          console.error(err);
+          res.status(500).send({
+            status: false,
+            message: 'File upload failed'
+          });
       }
     })
 
@@ -1048,5 +1081,3 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
 
     return router
 }
-
-
