@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated and local-only paths are outside the committed secret-scan surface."
+paths = [
+  '''^bin/''',
+  '''^dist/''',
+  '''^node_modules/''',
+  '''^package-lock\.json$''',
+  '''^web/public/bundle\.js$''',
+]
