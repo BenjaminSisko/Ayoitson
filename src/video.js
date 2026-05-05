@@ -385,6 +385,7 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
             db: db,
             m3u8: m3u8,
             audioOnly : audioOnly,
+            req: req,
         }
         
         let player = new ProgramPlayer(playerContext);
@@ -541,15 +542,17 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
 
         cur ="59.0";
 
+        const baseUrl = getInternalBaseUrl(req);
+
         if ( ffmpegSettings.enableFFMPEGTranscoding === true) {
             //data += `#EXTINF:${cur},\n`;
-            data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&first=0&m3u8=1&session=${sessionId}\n`;
+            data += `${baseUrl}/stream?channel=${channelNum}&first=0&m3u8=1&session=${sessionId}\n`;
         }
         //data += `#EXTINF:${cur},\n`;
-        data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&first=1&m3u8=1&session=${sessionId}\n`
+        data += `${baseUrl}/stream?channel=${channelNum}&first=1&m3u8=1&session=${sessionId}\n`
         for (var i = 0; i < maxStreamsToPlayInARow - 1; i++) {
             //data += `#EXTINF:${cur},\n`;
-            data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&m3u8=1&session=${sessionId}\n`
+            data += `${baseUrl}/stream?channel=${channelNum}&m3u8=1&session=${sessionId}\n`
         }
 
         res.send(data)
@@ -648,8 +651,9 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
             res.status(404).send("Channel not found.");
             return;
         }
+        const baseUrl = getInternalBaseUrl(req);
         res.type('video/x-mpegurl');
-        res.status(200).send(`#EXTM3U\n${req.protocol}://${req.get('host')}/${path}?channel=${channelNum}\n\n`);
+        res.status(200).send(`#EXTM3U\n${baseUrl}/${path}?channel=${channelNum}\n\n`);
     }
 
     router.get('/media-player/:number.m3u', async (req, res) => {

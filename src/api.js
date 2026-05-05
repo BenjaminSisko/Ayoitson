@@ -8,6 +8,7 @@ const FFMPEGInfo = require('./ffmpeg-info');
 const PlexServerDB = require('./dao/plex-server-db');
 const Plex = require("./plex.js");
 const { v4: uuidv4 } = require('uuid');
+const { getInternalBaseUrl } = require('./lib/url');
 
 const timeSlotsService = require('./services/time-slots-service');
 const randomSlotsService = require('./services/random-slots-service');
@@ -1038,7 +1039,7 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
       try {
         res.type('text');
 
-        const host = `${req.protocol}://${req.get('host')}`;
+        const host = getInternalBaseUrl(req);
         const data = await m3uService.getChannelList(host);
 
         res.send(data);
