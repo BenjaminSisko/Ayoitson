@@ -34,6 +34,10 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Run coverage advisory
+        run: npm run test:coverage
+        continue-on-error: true
+
   gitleaks:
     name: Secret scan
     runs-on: ubuntu-latest

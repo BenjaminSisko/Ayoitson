@@ -1,0 +1,13 @@
+{
+  "name": "Synthetic Show",
+  "content": [
+    {
+      "title": "Synthetic Episode",
+      "duration": 1200000,
+      "serverKey": "synthetic-plex",
+      "key": "/library/metadata/3",
+      "ratingKey": "3",
+      "type": "episode"
+    }
+  ]
+}

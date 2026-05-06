@@ -3,7 +3,10 @@ dist/
 bin/
 .pseudotv/
 .dizquetv/
+!tests/fixtures/dizquetv-baseline/.dizquetv/
+!tests/fixtures/dizquetv-baseline/.dizquetv/**
 web/public/bundle.js
+coverage/
 *.orig
 package-lock.json
 Ayoitson-Obsidian-Vault/

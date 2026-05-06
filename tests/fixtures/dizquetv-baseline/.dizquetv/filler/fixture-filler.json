@@ -1,0 +1,13 @@
+{
+  "name": "Synthetic Filler",
+  "content": [
+    {
+      "title": "Synthetic Bumper",
+      "duration": 30000,
+      "serverKey": "synthetic-plex",
+      "key": "/library/metadata/2",
+      "ratingKey": "2",
+      "type": "clip"
+    }
+  ]
+}
