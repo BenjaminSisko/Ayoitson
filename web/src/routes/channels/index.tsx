@@ -81,7 +81,7 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ['channels'] });
       if (typeof result.number === 'number') {
-        onNavigate?.(`/v2/channels/${result.number}`);
+        onNavigate?.(`/channels/${result.number}`);
       }
     },
   });
@@ -145,7 +145,7 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
                 <AyoBadge tone="neutral">
                   {filteredChannels.length} visible
                 </AyoBadge>
-                <AyoBadge tone="scheduled">v2 React</AyoBadge>
+                <AyoBadge tone="scheduled">React</AyoBadge>
               </div>
             </div>
             <div className="grid gap-sp-3">
@@ -222,7 +222,7 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
                   channel={channel}
                   onOpen={() =>
                     channel.number
-                      ? onNavigate?.(`/v2/channels/${channel.number}`)
+                      ? onNavigate?.(`/channels/${channel.number}`)
                       : undefined
                   }
                   onDelete={() =>
@@ -320,7 +320,7 @@ export function ChannelDetailPlaceholder({
       <AyoButton
         className="w-fit"
         variant="ghost"
-        onClick={() => onNavigate?.('/v2/channels')}
+        onClick={() => onNavigate?.('/channels')}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Channels

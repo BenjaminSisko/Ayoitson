@@ -1,8 +1,9 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/cn';
-import logoTransparentUrl from '../../../public/logo-transparent.png?url';
-import logoUrl from '../../../public/logo.png?url';
+
+const logoTransparentUrl = '/logo-transparent.png';
+const logoUrl = '/logo.png';
 
 /**
  * <AyoLogo>

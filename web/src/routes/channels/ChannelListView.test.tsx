@@ -54,7 +54,7 @@ describe('ChannelListView', () => {
       programs: [],
       fallback: [],
     });
-    expect(navigate).toHaveBeenCalledWith('/v2/channels/303');
+    expect(navigate).toHaveBeenCalledWith('/channels/303');
 
     await user.click(screen.getAllByRole('button', { name: /delete/i })[0]);
     expect(window.confirm).toHaveBeenCalledWith('Delete channel 101?');

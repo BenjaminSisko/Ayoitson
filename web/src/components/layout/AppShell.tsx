@@ -10,64 +10,64 @@ import { GuideView } from '@/routes/guide';
 import { cn } from '@/lib/cn';
 
 type Route =
-  | { name: 'settings'; title: 'Settings'; path: '/v2/settings' }
-  | { name: 'channels'; title: 'Channels'; path: '/v2/channels' }
+  | { name: 'settings'; title: 'Settings'; path: '/settings' }
+  | { name: 'channels'; title: 'Channels'; path: '/channels' }
   | { name: 'channel-detail'; title: 'Channel'; path: string; number: number }
-  | { name: 'guide'; title: 'Guide'; path: '/v2/guide' }
-  | { name: 'library'; title: 'Plex Browser'; path: '/v2/library' };
+  | { name: 'guide'; title: 'Guide'; path: '/guide' }
+  | { name: 'library'; title: 'Plex Browser'; path: '/library' };
 
 const NAV_ITEMS = [
   {
     route: 'channels',
     label: 'Channels',
-    path: '/v2/channels',
+    path: '/channels',
     icon: ListVideo,
   },
   {
     route: 'guide',
     label: 'Guide',
-    path: '/v2/guide',
+    path: '/guide',
     icon: CalendarDays,
   },
   {
     route: 'library',
     label: 'Plex',
-    path: '/v2/library',
+    path: '/library',
     icon: Library,
   },
   {
     route: 'settings',
     label: 'Settings',
-    path: '/v2/settings',
+    path: '/settings',
     icon: Settings,
   },
 ] as const;
 
 function parseRoute(pathname: string): Route {
-  const channelMatch = pathname.match(/^\/v2\/channels\/(\d+)$/);
+  const channelMatch = pathname.match(/^\/channels\/(\d+)$/);
   if (channelMatch) {
     const number = Number(channelMatch[1]);
     return {
       name: 'channel-detail',
       title: 'Channel',
-      path: `/v2/channels/${number}`,
+      path: `/channels/${number}`,
       number,
     };
   }
 
-  if (pathname === '/v2/channels') {
-    return { name: 'channels', title: 'Channels', path: '/v2/channels' };
+  if (pathname === '/channels') {
+    return { name: 'channels', title: 'Channels', path: '/channels' };
   }
 
-  if (pathname === '/v2/guide') {
-    return { name: 'guide', title: 'Guide', path: '/v2/guide' };
+  if (pathname === '/guide') {
+    return { name: 'guide', title: 'Guide', path: '/guide' };
   }
 
-  if (pathname === '/v2/library') {
-    return { name: 'library', title: 'Plex Browser', path: '/v2/library' };
+  if (pathname === '/library') {
+    return { name: 'library', title: 'Plex Browser', path: '/library' };
   }
 
-  return { name: 'settings', title: 'Settings', path: '/v2/settings' };
+  return { name: 'settings', title: 'Settings', path: '/settings' };
 }
 
 export function AppShell() {
@@ -101,7 +101,7 @@ export function AppShell() {
             <AyoLogo size="md" variant="icon-only" />
             <div>
               <p className="text-11 font-bold uppercase tracking-wide text-ayo-on-air">
-                Ayoitson v2
+                Ayoitson
               </p>
               <h1 className="mt-sp-1 text-display font-display">
                 {route.title}

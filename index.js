@@ -5,7 +5,6 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const fileUpload = require('express-fileupload');
 const i18next = require('i18next');
-const i18nextMiddleware = require('i18next-http-middleware/cjs');
 const i18nextBackend = require('i18next-fs-backend/cjs');
 
 // Phase 4 (Lane Alpha): legacy `src/api.js` monolith was split into per-
@@ -18,7 +17,6 @@ const HDHR = require('./src/hdhr')
 const { seedRuntimeAssets } = require('./src/lib/init-assets')
 const {
   loadAllowedLocales,
-  createSafeLanguageDetector,
   buildBackendPaths,
   safeLng,
 } = require('./src/lib/i18n-locales')
@@ -110,6 +108,7 @@ if (!fs.existsSync(databaseDir)) {
 
 let fontAwesome = "fontawesome-free-5.15.4-web";
 let bootstrap = "bootstrap-4.4.1-dist";
+const reactDistDir = path.join(__dirname, 'web', 'dist');
 let db = createRuntimeDatabase({
     databaseDir,
     legacyDir: runtimeDirs.legacyDir,
@@ -157,23 +156,15 @@ eventService = new EventService();
 
 // i18next path-injection hardening (closes BUG-I18NEXT). The {{lng}}
 // interpolation in i18next-fs-backend's loadPath is the attack surface: if
-// the detected language is operator-controlled (Accept-Language, ?lng=, etc.)
-// an attacker can request `../../etc/passwd` style values and force
-// i18next-fs-backend to read arbitrary JSON files. We harden two ways:
-//   1. Discover the locales directory at startup and freeze the allowlist.
-//   2. Wrap i18next-http-middleware's LanguageDetector so the detected
-//      language is filtered through the allowlist before reaching
-//      i18next-fs-backend's loadPath template.
+// the language is operator-controlled, an attacker can request
+// `../../etc/passwd` style values and force i18next-fs-backend to read
+// arbitrary JSON files. The React cutover removes request-time language
+// detection; backend translations load from the startup allowlist only.
 const i18nPaths = buildBackendPaths(__dirname);
 const allowedLocales = loadAllowedLocales(i18nPaths.localesDir);
-const SafeLanguageDetector = createSafeLanguageDetector(
-    i18nextMiddleware.LanguageDetector,
-    { allowed: allowedLocales, fallback: 'en' }
-);
 
 i18next
     .use(i18nextBackend)
-    .use(SafeLanguageDetector)
     .init({
         // debug: true,
         initImmediate: false,
@@ -323,10 +314,6 @@ const apiKeyDb = openAyoitsonDatabase({ databaseDir })
 const requireApiKey = createAuthMiddleware(apiKeyDb)
 const authFailureLimiter = createAuthFailureLimiter()
 
-app.use(
-    i18nextMiddleware.handle(i18next, {})
-);
-
 app.use(fileUpload({
     limits: {
         fileSize: 10 * 1024 * 1024,
@@ -356,7 +343,6 @@ app.get('/version.js', (req, res) => {
     res.end();
 });
 app.use('/images', express.static(path.join(databaseDir, 'images')))
-app.use(express.static(path.join(__dirname, 'web','public')))
 app.use('/images', express.static(path.join(databaseDir, 'images')))
 app.use('/cache/images', cacheImageService.routerInterceptor())
 app.use('/cache/images', express.static(path.join(databaseDir, 'cache','images')))
@@ -397,6 +383,60 @@ app.use('/' + bootstrap, express.static(path.join(databaseDir, bootstrap)))
 
 app.use(video.router( channelService, fillerDB, db, programmingService, activeChannelService, programPlayTimeDB  ))
 app.use(hdhr.router)
+
+function isReactSpaPath(reqPath) {
+    if (path.extname(reqPath)) {
+        return false;
+    }
+
+    const reservedPaths = [
+        '/api',
+        '/images',
+        '/cache/images',
+        '/video',
+        '/radio',
+        '/stream',
+        '/m3u8',
+        '/playlist',
+        '/media-player',
+        '/setup',
+        '/device.xml',
+        '/discover.json',
+        '/lineup.json',
+        '/lineup_status.json',
+        '/custom.css',
+        '/favicon.svg',
+        '/version.js',
+        `/${fontAwesome}`,
+        `/${bootstrap}`,
+    ];
+
+    return reservedPaths.every((reserved) => (
+        reqPath !== reserved && !reqPath.startsWith(`${reserved}/`)
+    ));
+}
+
+function sendReactSpaIndex(res, next) {
+    fs.readFile(path.join(reactDistDir, 'index.html'), 'utf8', (err, html) => {
+        if (err) {
+            next(err);
+            return;
+        }
+        res
+            .type('html')
+            .send(html.replace(/__AYOITSON_CSP_NONCE__/g, res.locals.cspNonce || ''));
+    });
+}
+
+app.use(express.static(reactDistDir, { index: false }))
+app.get('*', (req, res, next) => {
+    if (req.method !== 'GET' || !isReactSpaPath(req.path)) {
+        next();
+        return;
+    }
+    sendReactSpaIndex(res, next);
+})
+
 app.listen(process.env.PORT, () => {
     console.log(`HTTP server running on port: http://*:${process.env.PORT}`)
     let hdhrSettings = db['hdhr-settings'].find()[0]

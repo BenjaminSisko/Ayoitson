@@ -11,10 +11,10 @@ export function App() {
   const queryClient = useMemo(() => createQueryClient(), []);
 
   useEffect(() => {
-    if (!apiKey && window.location.pathname !== '/v2/setup') {
-      window.history.replaceState(null, '', '/v2/setup');
-    } else if (apiKey && window.location.pathname === '/v2/setup') {
-      window.history.replaceState(null, '', '/v2/settings');
+    if (!apiKey && window.location.pathname !== '/login') {
+      window.history.replaceState(null, '', '/login');
+    } else if (apiKey && window.location.pathname === '/login') {
+      window.history.replaceState(null, '', '/settings');
     }
   }, [apiKey]);
 

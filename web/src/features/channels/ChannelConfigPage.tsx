@@ -117,7 +117,7 @@ export function ChannelConfigPage({
       <AyoButton
         className="w-fit"
         variant="ghost"
-        onClick={() => onNavigate?.('/v2/channels')}
+        onClick={() => onNavigate?.('/channels')}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Channels

@@ -58,7 +58,6 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'script',
       globals: {
-        angular: 'readonly',
         clearTimeout: 'readonly',
         console: 'readonly',
         document: 'readonly',

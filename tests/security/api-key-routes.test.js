@@ -1,5 +1,5 @@
 // tests/security/api-key-routes.test.js
-// Route-level coverage for the authenticated API key lifecycle used by /v2.
+// Route-level coverage for the authenticated API key lifecycle used by the SPA.
 
 const path = require('path');
 const express = require('express');

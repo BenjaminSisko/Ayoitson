@@ -3,10 +3,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: '/v2/',
+  base: '/',
   plugins: [react()],
   root: __dirname,
-  publicDir: false,
+  publicDir: 'public',
   html: {
     cspNonce: '__AYOITSON_CSP_NONCE__',
   },
