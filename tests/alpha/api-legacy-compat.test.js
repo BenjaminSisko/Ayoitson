@@ -97,7 +97,11 @@ describe('legacy AngularJS API compatibility routes', () => {
 
   test('legacy settings paths return the AngularJS shapes without accepting xmltv.file', async () => {
     const originalDatabase = process.env.DATABASE;
+    const originalAyoitsonDatabase = process.env.AYOITSON_DATABASE;
+    const originalInternalUrl = process.env.INTERNAL_URL;
     process.env.DATABASE = '/tmp/ayoitson-test-db';
+    delete process.env.AYOITSON_DATABASE;
+    process.env.INTERNAL_URL = 'http://provider.example:8000';
     const stores = {
       'plex-settings': statefulCollection([
         { _id: 'plex', streamPath: 'plex' },
@@ -138,6 +142,12 @@ describe('legacy AngularJS API compatibility routes', () => {
       const xmltv = await request(app).get('/api/xmltv-settings');
       expect(xmltv.status).toBe(200);
       expect(xmltv.body.file).toBe('/tmp/ayoitson-test-db/xmltv.xml');
+      expect(xmltv.body.xmltvUrl).toBe(
+        'http://provider.example:8000/xmltv.xml'
+      );
+      expect(xmltv.body.m3uUrl).toBe(
+        'http://provider.example:8000/channels.m3u'
+      );
 
       const updatedXmltv = await request(app).put('/api/xmltv-settings').send({
         _id: 'xmltv',
@@ -156,6 +166,16 @@ describe('legacy AngularJS API compatibility routes', () => {
       expect(stores['xmltv-settings'].rows[0]).not.toHaveProperty('file');
     } finally {
       process.env.DATABASE = originalDatabase;
+      if (typeof originalAyoitsonDatabase === 'undefined') {
+        delete process.env.AYOITSON_DATABASE;
+      } else {
+        process.env.AYOITSON_DATABASE = originalAyoitsonDatabase;
+      }
+      if (typeof originalInternalUrl === 'undefined') {
+        delete process.env.INTERNAL_URL;
+      } else {
+        process.env.INTERNAL_URL = originalInternalUrl;
+      }
     }
   });
 

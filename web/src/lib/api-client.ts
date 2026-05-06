@@ -66,6 +66,8 @@ export type HdhrSettings = Record<string, unknown> & {
 export type GuideLineup = Record<string, unknown>;
 export type XmltvOutputLocation = {
   file?: string;
+  xmltvUrl?: string;
+  m3uUrl?: string;
 };
 type ChannelSummaryResponse = Array<ChannelSummary | number | string>;
 

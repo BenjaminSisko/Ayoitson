@@ -85,7 +85,7 @@ export function XmltvPane() {
 
   const epgUrl = useMemo(() => {
     if (typeof window === 'undefined') return '/api/guide/xmltv.xml';
-    return new URL('/api/guide/xmltv.xml', window.location.origin).toString();
+    return new URL('/xmltv.xml', window.location.origin).toString();
   }, []);
 
   useEffect(() => {
@@ -118,6 +118,8 @@ export function XmltvPane() {
     (outputLocation.isLoading
       ? 'Loading output path.'
       : 'Server-managed xmltv.xml');
+  const providerXmltvUrl = outputLocation.data?.xmltvUrl || epgUrl;
+  const providerM3uUrl = outputLocation.data?.m3uUrl;
 
   return (
     <AyoCard>
@@ -151,10 +153,18 @@ export function XmltvPane() {
               />
               <ReadOnlyLocationField
                 id="xmltv-api-url"
-                label="EPG XML URL"
-                value={epgUrl}
-                onCopy={() => copyValue('XML URL', epgUrl)}
+                label="Plex XMLTV URL"
+                value={providerXmltvUrl}
+                onCopy={() => copyValue('XMLTV URL', providerXmltvUrl)}
               />
+              {providerM3uUrl && (
+                <ReadOnlyLocationField
+                  id="xmltv-m3u-url"
+                  label="M3U playlist URL"
+                  value={providerM3uUrl}
+                  onCopy={() => copyValue('M3U URL', providerM3uUrl)}
+                />
+              )}
               {copied && <AyoBadge tone="success">Copied {copied}.</AyoBadge>}
             </div>
 

@@ -29,6 +29,8 @@ describe('XmltvPane', () => {
     });
     mockedApi.getXmltvOutputLocation.mockResolvedValue({
       file: '/Users/benny/Documents/New project 5/Ayoitson/.ayoitson/xmltv.xml',
+      xmltvUrl: 'http://127.0.0.1:8000/xmltv.xml',
+      m3uUrl: 'http://127.0.0.1:8000/channels.m3u',
     });
     mockedApi.updateXmltvSettings.mockImplementation(
       async (settings) => settings
@@ -46,10 +48,13 @@ describe('XmltvPane', () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.getByText('http://localhost:3000/api/guide/xmltv.xml')
+      screen.getByText('http://127.0.0.1:8000/xmltv.xml')
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Copy EPG XML URL' })
+      screen.getByText('http://127.0.0.1:8000/channels.m3u')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Copy Plex XMLTV URL' })
     ).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Refresh hours'));

@@ -87,10 +87,13 @@ function recordId(record) {
   return record && record._id ? record._id : 'fixture';
 }
 
-function legacyXmltv(record) {
+function legacyXmltv(record, req) {
+  const host = req ? getInternalBaseUrl(req) : getInternalBaseUrl();
   return {
     ...(record || {}),
     file: resolveXmltvPath(),
+    xmltvUrl: `${host}/xmltv.xml`,
+    m3uUrl: `${host}/channels.m3u`,
   };
 }
 
@@ -266,8 +269,8 @@ function createSettingsRoutes(router, deps) {
 
   router.get(
     '/xmltv-settings',
-    asyncRoute(async (_req, res) => {
-      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings')));
+    asyncRoute(async (req, res) => {
+      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings'), req));
     })
   );
 
@@ -297,7 +300,7 @@ function createSettingsRoutes(router, deps) {
           xmltvInterval.restartInterval();
         }
       }
-      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings')));
+      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings'), req));
     })
   );
 
@@ -319,7 +322,7 @@ function createSettingsRoutes(router, deps) {
       if (xmltvInterval && typeof xmltvInterval.updateXML === 'function') {
         xmltvInterval.updateXML();
       }
-      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings')));
+      res.send(legacyXmltv(collectionOne(db, 'xmltv-settings'), req));
     })
   );
 }

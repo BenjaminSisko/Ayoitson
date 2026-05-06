@@ -41,6 +41,7 @@ const apiKeysModule = require('./api-keys');
 const uploadModule = require('./upload');
 const versionModule = require('./version');
 const legacyCompatModule = require('./legacy-compat');
+const providerModule = require('./provider');
 
 function passthrough(_req, _res, next) {
   return next();
@@ -62,6 +63,10 @@ function compose(deps, options = {}) {
 
   // Public — no auth required. MUST be mounted before the catch-all auth.
   router.use('/api/health', healthModule.createRouter(deps));
+
+  // Public provider feeds for Plex/tuner clients. These are not `/api/*`
+  // control-plane routes, so they stay outside the API key auth boundary.
+  router.use(providerModule.createRouter(deps));
 
   // First-run setup: gated internally by the route (returns 410 once a key
   // exists). No auth at the router seam.
@@ -115,5 +120,6 @@ module.exports = {
     upload: uploadModule,
     version: versionModule,
     legacyCompat: legacyCompatModule,
+    provider: providerModule,
   },
 };
