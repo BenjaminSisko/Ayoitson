@@ -25,8 +25,36 @@ export type ApiKeyCreateResponse = {
 };
 
 export type FfmpegSettings = Record<string, unknown> & {
+  _id?: string;
+  configVersion?: number;
   ffmpegPath?: string;
+  addLock?: boolean;
+  lock?: boolean;
+  threads?: number;
+  concatMuxDelay?: string;
+  logFfmpeg?: boolean;
+  enableFFMPEGTranscoding?: boolean;
+  audioVolumePercent?: number;
+  videoEncoder?: string;
+  audioEncoder?: string;
+  targetResolution?: string;
+  videoBitrate?: number;
+  videoBufSize?: number;
+  audioBitrate?: number;
+  audioBufSize?: number;
+  audioSampleRate?: number;
+  audioChannels?: number;
+  errorScreen?: string;
+  errorAudio?: string;
+  normalizeVideoCodec?: boolean;
+  normalizeAudioCodec?: boolean;
+  normalizeResolution?: boolean;
+  normalizeAudio?: boolean;
   maxFPS?: number;
+  scalingAlgorithm?: string;
+  deinterlaceFilter?: string;
+  disableChannelOverlay?: boolean;
+  disablePreludes?: boolean;
   maxFrameBuffer?: number;
 };
 
@@ -170,6 +198,12 @@ export const apiClient = {
     return request<FfmpegSettings>('/api/settings/ffmpeg', {
       method: 'PUT',
       body: settings,
+    });
+  },
+
+  resetFfmpegSettings() {
+    return request<FfmpegSettings>('/api/settings/ffmpeg/reset', {
+      method: 'POST',
     });
   },
 

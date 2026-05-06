@@ -12,6 +12,7 @@ vi.mock('@/lib/api-client', () => ({
   apiClient: {
     getFfmpegSettings: vi.fn(),
     updateFfmpegSettings: vi.fn(),
+    resetFfmpegSettings: vi.fn(),
   },
 }));
 
@@ -22,31 +23,75 @@ describe('FfmpegPane', () => {
     vi.clearAllMocks();
     mockedApi.getFfmpegSettings.mockResolvedValue({
       ffmpegPath: '/opt/homebrew/bin/ffmpeg',
+      threads: 4,
+      concatMuxDelay: '0',
+      logFfmpeg: false,
+      enableFFMPEGTranscoding: true,
+      targetResolution: '1920x1080',
+      videoEncoder: 'mpeg2video',
+      audioEncoder: 'ac3',
+      videoBitrate: 2000,
+      videoBufSize: 2000,
       maxFPS: 60,
-      maxFrameBuffer: 100,
+      scalingAlgorithm: 'bicubic',
+      deinterlaceFilter: 'none',
+      audioBitrate: 192,
+      audioBufSize: 50,
+      audioVolumePercent: 100,
+      audioChannels: 2,
+      audioSampleRate: 48,
+      errorScreen: 'pic',
+      errorAudio: 'silent',
+      normalizeResolution: true,
+      normalizeVideoCodec: true,
+      normalizeAudioCodec: true,
+      normalizeAudio: true,
     });
     mockedApi.updateFfmpegSettings.mockImplementation(
       async (settings) => settings
     );
+    mockedApi.resetFfmpegSettings.mockResolvedValue({
+      ffmpegPath: '/opt/homebrew/bin/ffmpeg',
+      threads: 4,
+    });
   });
 
-  test('loads and saves FFmpeg settings through the client', async () => {
+  test('loads and saves the customizable FFmpeg settings through the client', async () => {
     const user = userEvent.setup();
     renderWithClient(<FfmpegPane />);
 
     expect(
       await screen.findByDisplayValue('/opt/homebrew/bin/ffmpeg')
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('Threads')).toBeInTheDocument();
+    expect(screen.getByLabelText('Preferred resolution')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video encoder')).toBeInTheDocument();
+    expect(screen.getByLabelText('Audio encoder')).toBeInTheDocument();
+    expect(screen.getByLabelText('Normalize resolution')).toBeChecked();
 
-    await user.clear(screen.getByLabelText('Max FPS'));
-    await user.type(screen.getByLabelText('Max FPS'), '24');
+    await user.clear(screen.getByLabelText('Video encoder'));
+    await user.type(screen.getByLabelText('Video encoder'), 'h264_nvenc');
+    await user.selectOptions(screen.getByLabelText('Max frame rate'), '24');
+    await user.click(screen.getByLabelText('Log FFmpeg to console'));
     await user.click(screen.getByRole('button', { name: /save/i }));
 
     expect(mockedApi.updateFfmpegSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         ffmpegPath: '/opt/homebrew/bin/ffmpeg',
+        videoEncoder: 'h264_nvenc',
         maxFPS: 24,
+        logFfmpeg: true,
       })
     );
+  });
+
+  test('resets FFmpeg settings through the client', async () => {
+    const user = userEvent.setup();
+    renderWithClient(<FfmpegPane />);
+
+    await screen.findByDisplayValue('/opt/homebrew/bin/ffmpeg');
+    await user.click(screen.getByRole('button', { name: /reset options/i }));
+
+    expect(mockedApi.resetFfmpegSettings).toHaveBeenCalledTimes(1);
   });
 });
