@@ -8,19 +8,21 @@
  **/
 const EventEmitter = require('events');
 const FFMPEG = require('./ffmpeg')
+const { getInternalBaseUrl } = require('./lib/url')
 
 class OfflinePlayer {
     constructor(error, context) {
         this.context = context;
         this.error = error;
+        const baseUrl = getInternalBaseUrl(context.req);
         if (context.isLoading === true) {
             context.channel = JSON.parse( JSON.stringify(context.channel) );
-            context.channel.offlinePicture = `http://localhost:${process.env.PORT}/images/loading-screen.png`;
+            context.channel.offlinePicture = `${baseUrl}/images/loading-screen.png`;
             context.channel.offlineSoundtrack = undefined;
         }
         if (context.isInterlude === true) {
             context.channel = JSON.parse( JSON.stringify(context.channel) );
-            context.channel.offlinePicture = `http://localhost:${process.env.PORT}/images/black.png`;
+            context.channel.offlinePicture = `${baseUrl}/images/black.png`;
             context.channel.offlineSoundtrack = undefined;
         }
         this.ffmpeg = new FFMPEG(context.ffmpegSettings, context.channel);
