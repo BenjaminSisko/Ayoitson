@@ -85,6 +85,25 @@ const FPS_OPTIONS: SelectOption[] = [
   { value: '120', label: '120 fps' },
 ];
 
+const VIDEO_ENCODER_OPTIONS: SelectOption[] = [
+  { value: 'mpeg2video', label: 'MPEG-2 video (legacy TV-safe)' },
+  { value: 'libx264', label: 'H.264 / libx264 (CPU)' },
+  { value: 'h264_videotoolbox', label: 'H.264 / Apple VideoToolbox' },
+  { value: 'hevc_videotoolbox', label: 'HEVC / Apple VideoToolbox' },
+  { value: 'h264_nvenc', label: 'H.264 / NVIDIA NVENC' },
+  { value: 'hevc_nvenc', label: 'HEVC / NVIDIA NVENC' },
+  { value: 'libx265', label: 'HEVC / libx265 (CPU)' },
+  { value: 'copy', label: 'Copy source video' },
+];
+
+const AUDIO_ENCODER_OPTIONS: SelectOption[] = [
+  { value: 'ac3', label: 'AC-3 (legacy TV-safe)' },
+  { value: 'aac', label: 'AAC' },
+  { value: 'libopus', label: 'Opus / libopus' },
+  { value: 'libmp3lame', label: 'MP3 / libmp3lame' },
+  { value: 'copy', label: 'Copy source audio' },
+];
+
 const SCALING_OPTIONS: SelectOption[] = [
   { value: 'bicubic', label: 'bicubic' },
   { value: 'fast_bilinear', label: 'fast_bilinear' },
@@ -142,16 +161,52 @@ function optionsWithCurrent(options: SelectOption[], value: string) {
 
 function SettingsSection({
   title,
+  description,
   children,
 }: {
   title: string;
+  description?: string;
   children: ReactNode;
 }) {
   return (
     <section className="grid gap-sp-3 border-t border-border-subtle pt-sp-4 first:border-t-0 first:pt-0">
-      <h4 className="text-14 font-semibold text-text-primary">{title}</h4>
+      <div className="grid gap-sp-1">
+        <h4 className="text-14 font-semibold text-text-primary">{title}</h4>
+        {description && (
+          <p className="max-w-3xl text-13 leading-relaxed text-text-muted">
+            {description}
+          </p>
+        )}
+      </div>
       {children}
     </section>
+  );
+}
+
+function FieldContext({
+  id,
+  description,
+  impact,
+}: {
+  id: string;
+  description?: string;
+  impact?: string;
+}) {
+  if (!description && !impact) {
+    return null;
+  }
+
+  return (
+    <p id={`${id}-context`} className="text-12 leading-relaxed text-text-muted">
+      {description}
+      {description && impact ? ' ' : ''}
+      {impact && (
+        <>
+          <span className="font-semibold text-text-primary">Impact:</span>{' '}
+          {impact}
+        </>
+      )}
+    </p>
   );
 }
 
@@ -160,14 +215,19 @@ function TextField({
   label,
   value,
   disabled,
+  description,
+  impact,
   onChange,
 }: {
   id: string;
   label: string;
   value: unknown;
   disabled?: boolean;
+  description?: string;
+  impact?: string;
   onChange: (value: string) => void;
 }) {
+  const hasContext = Boolean(description || impact);
   return (
     <div className="grid gap-sp-2">
       <AyoLabel htmlFor={id}>{label}</AyoLabel>
@@ -175,8 +235,10 @@ function TextField({
         id={id}
         value={inputValue(value)}
         disabled={disabled}
+        aria-describedby={hasContext ? `${id}-context` : undefined}
         onChange={(event) => onChange(event.target.value)}
       />
+      <FieldContext id={id} description={description} impact={impact} />
     </div>
   );
 }
@@ -187,6 +249,8 @@ function NumberField({
   value,
   disabled,
   min,
+  description,
+  impact,
   onChange,
 }: {
   id: string;
@@ -194,8 +258,11 @@ function NumberField({
   value: unknown;
   disabled?: boolean;
   min?: string;
+  description?: string;
+  impact?: string;
   onChange: (value: string) => void;
 }) {
+  const hasContext = Boolean(description || impact);
   return (
     <div className="grid gap-sp-2">
       <AyoLabel htmlFor={id}>{label}</AyoLabel>
@@ -205,8 +272,10 @@ function NumberField({
         min={min}
         value={inputValue(value)}
         disabled={disabled}
+        aria-describedby={hasContext ? `${id}-context` : undefined}
         onChange={(event) => onChange(event.target.value)}
       />
+      <FieldContext id={id} description={description} impact={impact} />
     </div>
   );
 }
@@ -217,6 +286,8 @@ function SelectField({
   value,
   disabled,
   options,
+  description,
+  impact,
   onChange,
 }: {
   id: string;
@@ -224,10 +295,13 @@ function SelectField({
   value: unknown;
   disabled?: boolean;
   options: SelectOption[];
+  description?: string;
+  impact?: string;
   onChange: (value: string) => void;
 }) {
   const stringValue = inputValue(value);
   const visibleOptions = optionsWithCurrent(options, stringValue);
+  const hasContext = Boolean(description || impact);
 
   return (
     <div className="grid gap-sp-2">
@@ -236,6 +310,7 @@ function SelectField({
         id={id}
         value={stringValue}
         disabled={disabled}
+        aria-describedby={hasContext ? `${id}-context` : undefined}
         onChange={(event) => onChange(event.target.value)}
       >
         {visibleOptions.map((option) => (
@@ -244,6 +319,7 @@ function SelectField({
           </option>
         ))}
       </AyoSelect>
+      <FieldContext id={id} description={description} impact={impact} />
     </div>
   );
 }
@@ -253,27 +329,36 @@ function CheckboxField({
   label,
   checked,
   disabled,
+  description,
+  impact,
   onChange,
 }: {
   id: string;
   label: string;
   checked: boolean;
   disabled?: boolean;
+  description?: string;
+  impact?: string;
   onChange: (checked: boolean) => void;
 }) {
+  const hasContext = Boolean(description || impact);
   return (
-    <label
-      htmlFor={id}
-      className="flex min-h-9 items-center gap-sp-2 text-14 text-text-primary"
-    >
-      <AyoCheckbox
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
+    <div className="grid gap-sp-1">
+      <label
+        htmlFor={id}
+        className="flex min-h-9 items-center gap-sp-2 text-14 text-text-primary"
+      >
+        <AyoCheckbox
+          id={id}
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={hasContext ? `${id}-context` : undefined}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {label}
+      </label>
+      <FieldContext id={id} description={description} impact={impact} />
+    </div>
   );
 }
 
@@ -397,13 +482,17 @@ export function FfmpegPane() {
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Runtime">
+            <SettingsSection
+              title="Runtime"
+              description="These defaults shape the live pipeline before individual channel overrides are applied."
+            >
               <div className="grid gap-sp-4 sm:grid-cols-2 lg:grid-cols-3">
                 <NumberField
                   id="ffmpeg-threads"
                   label="Threads"
                   value={draft.threads}
                   min="1"
+                  impact="More threads can improve transcodes, but raise CPU load."
                   onChange={(value) => setNumber('threads', value)}
                 />
                 <SelectField
@@ -411,23 +500,29 @@ export function FfmpegPane() {
                   label="Video buffer"
                   value={selectValues.concatMuxDelay}
                   options={MUX_DELAY_OPTIONS}
+                  impact="Higher values can smooth playback; lower values reduce channel-change latency."
                   onChange={(value) => setText('concatMuxDelay', value)}
                 />
                 <CheckboxField
                   id="ffmpeg-log"
                   label="Log FFmpeg to console"
                   checked={Boolean(draft.logFfmpeg)}
+                  impact="Useful for diagnosis; noisy during normal viewing."
                   onChange={(checked) => setBoolean('logFfmpeg', checked)}
                 />
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Transcoding">
+            <SettingsSection
+              title="Transcoding"
+              description="These controls decide when Ayoitson rewrites video for player compatibility."
+            >
               <div className="grid gap-sp-4">
                 <CheckboxField
                   id="ffmpeg-transcoding"
                   label="Enable FFmpeg transcoding"
                   checked={transcodingEnabled}
+                  impact="When disabled, Ayoitson copies streams where possible and skips fallback video screens."
                   onChange={(checked) =>
                     setBoolean('enableFFMPEGTranscoding', checked)
                   }
@@ -439,20 +534,27 @@ export function FfmpegPane() {
                     value={selectValues.targetResolution}
                     disabled={!transcodingEnabled}
                     options={RESOLUTION_OPTIONS}
+                    impact="Acts as an output ceiling. Lower values reduce CPU and bandwidth."
                     onChange={(value) => setText('targetResolution', value)}
                   />
-                  <TextField
+                  <SelectField
                     id="ffmpeg-video-encoder"
                     label="Video encoder"
                     value={draft.videoEncoder}
                     disabled={!transcodingEnabled}
+                    options={VIDEO_ENCODER_OPTIONS}
+                    description="Choose a codec implementation available in your FFmpeg build."
+                    impact="Affects client compatibility, picture quality, CPU/GPU load, and channel startup time."
                     onChange={(value) => setText('videoEncoder', value)}
                   />
-                  <TextField
+                  <SelectField
                     id="ffmpeg-audio-encoder"
                     label="Audio encoder"
                     value={draft.audioEncoder}
                     disabled={!transcodingEnabled}
+                    options={AUDIO_ENCODER_OPTIONS}
+                    description="Choose the audio format Ayoitson emits when audio is normalized."
+                    impact="Affects TV/Plex compatibility and whether audio is re-encoded."
                     onChange={(value) => setText('audioEncoder', value)}
                   />
                 </div>
@@ -463,6 +565,7 @@ export function FfmpegPane() {
                     value={draft.videoBitrate}
                     disabled={!transcodingEnabled}
                     min="0"
+                    impact="Higher improves quality but costs bandwidth; too low can destabilize high resolutions."
                     onChange={(value) => setNumber('videoBitrate', value)}
                   />
                   <NumberField
@@ -471,6 +574,7 @@ export function FfmpegPane() {
                     value={draft.videoBufSize}
                     disabled={!transcodingEnabled}
                     min="0"
+                    impact="Larger buffers smooth bitrate spikes but can add latency."
                     onChange={(value) => setNumber('videoBufSize', value)}
                   />
                   <SelectField
@@ -479,6 +583,7 @@ export function FfmpegPane() {
                     value={selectValues.maxFPS}
                     disabled={!transcodingEnabled}
                     options={FPS_OPTIONS}
+                    impact="Caps motion smoothness to control encode cost."
                     onChange={(value) => setNumber('maxFPS', value)}
                   />
                   <SelectField
@@ -487,6 +592,7 @@ export function FfmpegPane() {
                     value={selectValues.scalingAlgorithm}
                     disabled={!transcodingEnabled}
                     options={SCALING_OPTIONS}
+                    impact="Sharper algorithms cost more CPU when resizing."
                     onChange={(value) => setText('scalingAlgorithm', value)}
                   />
                   <SelectField
@@ -495,13 +601,17 @@ export function FfmpegPane() {
                     value={selectValues.deinterlaceFilter}
                     disabled={!transcodingEnabled}
                     options={DEINTERLACE_OPTIONS}
+                    impact="Only affects interlaced sources; stronger filters cost more CPU."
                     onChange={(value) => setText('deinterlaceFilter', value)}
                   />
                 </div>
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Audio">
+            <SettingsSection
+              title="Audio"
+              description="These only matter when audio normalization or audio transcoding is active."
+            >
               <div className="grid gap-sp-4 sm:grid-cols-2 lg:grid-cols-3">
                 <NumberField
                   id="ffmpeg-audio-bitrate"
@@ -509,6 +619,7 @@ export function FfmpegPane() {
                   value={draft.audioBitrate}
                   disabled={!transcodingEnabled}
                   min="0"
+                  impact="Higher improves audio quality and increases stream size."
                   onChange={(value) => setNumber('audioBitrate', value)}
                 />
                 <NumberField
@@ -517,6 +628,7 @@ export function FfmpegPane() {
                   value={draft.audioBufSize}
                   disabled={!transcodingEnabled}
                   min="0"
+                  impact="Helps absorb audio bitrate spikes during re-encode."
                   onChange={(value) => setNumber('audioBufSize', value)}
                 />
                 <NumberField
@@ -525,6 +637,7 @@ export function FfmpegPane() {
                   value={draft.audioVolumePercent}
                   disabled={!transcodingEnabled}
                   min="0"
+                  impact="Raises or lowers stream volume before it reaches the player."
                   onChange={(value) => setNumber('audioVolumePercent', value)}
                 />
                 <NumberField
@@ -533,6 +646,7 @@ export function FfmpegPane() {
                   value={draft.audioChannels}
                   disabled={!transcodingEnabled}
                   min="1"
+                  impact="Stereo is safest; more channels may fail on simpler clients."
                   onChange={(value) => setNumber('audioChannels', value)}
                 />
                 <NumberField
@@ -541,12 +655,16 @@ export function FfmpegPane() {
                   value={draft.audioSampleRate}
                   disabled={!transcodingEnabled}
                   min="1"
+                  impact="48 kHz is the safest TV/live-stream target."
                   onChange={(value) => setNumber('audioSampleRate', value)}
                 />
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Fallback">
+            <SettingsSection
+              title="Fallback"
+              description="Fallback output appears when a program cannot be streamed cleanly."
+            >
               <div className="grid gap-sp-4 sm:grid-cols-2">
                 <SelectField
                   id="ffmpeg-error-screen"
@@ -554,6 +672,7 @@ export function FfmpegPane() {
                   value={selectValues.errorScreen}
                   disabled={!transcodingEnabled}
                   options={ERROR_SCREEN_OPTIONS}
+                  impact="Controls whether viewers see an image, diagnostic text, or a stopped stream."
                   onChange={(value) => setText('errorScreen', value)}
                 />
                 <SelectField
@@ -562,18 +681,23 @@ export function FfmpegPane() {
                   value={selectValues.errorAudio}
                   disabled={!transcodingEnabled}
                   options={ERROR_AUDIO_OPTIONS}
+                  impact="Prevents silent failures from being confused with client mute problems."
                   onChange={(value) => setText('errorAudio', value)}
                 />
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Normalization">
+            <SettingsSection
+              title="Normalization"
+              description="Normalization trades raw passthrough speed for predictable output across clients."
+            >
               <div className="grid gap-sp-3 sm:grid-cols-2 lg:grid-cols-3">
                 <CheckboxField
                   id="ffmpeg-normalize-resolution"
                   label="Normalize resolution"
                   checked={Boolean(draft.normalizeResolution)}
                   disabled={!transcodingEnabled}
+                  impact="Keeps output within the preferred resolution ceiling."
                   onChange={(checked) =>
                     setBoolean('normalizeResolution', checked)
                   }
@@ -583,6 +707,7 @@ export function FfmpegPane() {
                   label="Normalize video codec"
                   checked={Boolean(draft.normalizeVideoCodec)}
                   disabled={!transcodingEnabled}
+                  impact="Forces the selected video encoder for client compatibility."
                   onChange={(checked) =>
                     setBoolean('normalizeVideoCodec', checked)
                   }
@@ -592,6 +717,7 @@ export function FfmpegPane() {
                   label="Normalize audio codec"
                   checked={Boolean(draft.normalizeAudioCodec)}
                   disabled={!transcodingEnabled}
+                  impact="Forces the selected audio encoder for client compatibility."
                   onChange={(checked) =>
                     setBoolean('normalizeAudioCodec', checked)
                   }
@@ -601,6 +727,7 @@ export function FfmpegPane() {
                   label="Normalize audio"
                   checked={Boolean(draft.normalizeAudio)}
                   disabled={!transcodingEnabled}
+                  impact="Normalizes channel count, sample rate, and volume."
                   onChange={(checked) => setBoolean('normalizeAudio', checked)}
                 />
                 <CheckboxField

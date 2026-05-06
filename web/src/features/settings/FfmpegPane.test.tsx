@@ -65,12 +65,24 @@ describe('FfmpegPane', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Threads')).toBeInTheDocument();
     expect(screen.getByLabelText('Preferred resolution')).toBeInTheDocument();
-    expect(screen.getByLabelText('Video encoder')).toBeInTheDocument();
-    expect(screen.getByLabelText('Audio encoder')).toBeInTheDocument();
+    expect(screen.getByLabelText('Video encoder')).toHaveValue('mpeg2video');
+    expect(screen.getByLabelText('Audio encoder')).toHaveValue('ac3');
+    expect(
+      screen.getByRole('option', { name: /H\.264 \/ libx264/ })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /AAC/ })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Affects client compatibility, picture quality/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Higher values can smooth playback/i)
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Normalize resolution')).toBeChecked();
 
-    await user.clear(screen.getByLabelText('Video encoder'));
-    await user.type(screen.getByLabelText('Video encoder'), 'h264_nvenc');
+    await user.selectOptions(screen.getByLabelText('Video encoder'), [
+      'h264_nvenc',
+    ]);
+    await user.selectOptions(screen.getByLabelText('Audio encoder'), ['aac']);
     await user.selectOptions(screen.getByLabelText('Max frame rate'), '24');
     await user.click(screen.getByLabelText('Log FFmpeg to console'));
     await user.click(screen.getByRole('button', { name: /save/i }));
@@ -79,6 +91,7 @@ describe('FfmpegPane', () => {
       expect.objectContaining({
         ffmpegPath: '/opt/homebrew/bin/ffmpeg',
         videoEncoder: 'h264_nvenc',
+        audioEncoder: 'aac',
         maxFPS: 24,
         logFfmpeg: true,
       })
