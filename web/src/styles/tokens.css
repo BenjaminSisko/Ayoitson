@@ -1,0 +1,207 @@
+/* ============================================================================
+ * Ayoitson Design System — v1 tokens
+ *
+ * Single source of truth for the brand. Tailwind config (web/tailwind.config.ts)
+ * reads from these CSS custom properties via var(--*); never duplicate values.
+ *
+ * Spec: ~/Documents/Ayoitson-Obsidian-Vault/Design System - Ayoitson v1.md
+ *
+ * — Claude (Anthropic), Lane Beta · 2026-05-06
+ * ========================================================================== */
+
+:root {
+  /* -----------------------------------------------------------------------
+   * Core palette (light is default)
+   * Hex literals are allowed *only* in this file. Everything else references
+   * tokens via var(--*).
+   * --------------------------------------------------------------------- */
+  --ayo-ink: #0e0e0e;
+  --ayo-cream: #f5ede0;
+  --ayo-cream-warm: #efe3cf;
+  --ayo-cream-cool: #f8f2e8;
+  --ayo-on-air: #e63946;
+  --ayo-on-air-dim: #b82e3a;
+  --ayo-static: #b7afa0;
+  --ayo-graphite: #262626;
+  --ayo-graphite-2: #1a1a1a;
+
+  /* Status raw values */
+  --ayo-error: #c81e1e;
+  --ayo-warn: #d97706;
+  --ayo-success: #15803d;
+
+  /* Focus ring (3px, on-air @ 40% alpha) */
+  --ayo-focus-ring: rgba(230, 57, 70, 0.4);
+
+  /* -----------------------------------------------------------------------
+   * Semantic mapping — light mode
+   * --------------------------------------------------------------------- */
+  --surface-page: var(--ayo-cream);
+  --surface-1: var(--ayo-cream-cool);
+  --surface-2: var(--ayo-cream-warm);
+  --text-primary: var(--ayo-ink);
+  --text-muted: var(--ayo-static);
+  --text-on-accent: #ffffff;
+  --accent: var(--ayo-on-air);
+  --accent-dim: var(--ayo-on-air-dim);
+  --border-subtle: rgba(14, 14, 14, 0.1);
+  --border-default: rgba(14, 14, 14, 0.2);
+
+  --status-live: var(--ayo-on-air);
+  --status-scheduled: rgba(14, 14, 14, 0.6);
+  --status-past: var(--ayo-static);
+  --status-error: var(--ayo-error);
+  --status-warning: var(--ayo-warn);
+  --status-success: var(--ayo-success);
+
+  /* -----------------------------------------------------------------------
+   * Typography
+   * --------------------------------------------------------------------- */
+  --ff-display:
+    'Archivo Black', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ff-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ff-mono:
+    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas,
+    monospace;
+
+  /* Type scale — px size / line-height / weight */
+  --fs-display-xl: 3.5rem; /* 56px */
+  --lh-display-xl: 1;
+  --fw-display-xl: 900;
+
+  --fs-display-lg: 2.5rem; /* 40px */
+  --lh-display-lg: 1.05;
+  --fw-display-lg: 900;
+
+  --fs-display: 1.75rem; /* 28px */
+  --lh-display: 1.1;
+  --fw-display: 800;
+
+  --fs-22: 1.375rem; /* 22px */
+  --lh-22: 1.25;
+  --fw-22: 700;
+
+  --fs-18: 1.125rem; /* 18px */
+  --lh-18: 1.4;
+  --fw-18: 600;
+
+  --fs-16: 1rem; /* 16px */
+  --lh-16: 1.5;
+  --fw-16: 500;
+
+  --fs-14: 0.875rem; /* 14px */
+  --lh-14: 1.45;
+  --fw-14: 500;
+
+  --fs-13: 0.8125rem; /* 13px */
+  --lh-13: 1.4;
+  --fw-13: 600;
+
+  --fs-12: 0.75rem; /* 12px */
+  --lh-12: 1.4;
+  --fw-12: 500;
+
+  --fs-11: 0.6875rem; /* 11px */
+  --lh-11: 1.3;
+  --fw-11: 700;
+
+  /* -----------------------------------------------------------------------
+   * Spacing scale — 8-point base; --sp-10 is intentional ANVIL-parity slot
+   * --------------------------------------------------------------------- */
+  --sp-0: 0;
+  --sp-1: 0.25rem; /* 4 */
+  --sp-2: 0.5rem; /* 8 */
+  --sp-3: 0.75rem; /* 12 */
+  --sp-4: 1rem; /* 16 */
+  --sp-5: 1.5rem; /* 24 */
+  --sp-6: 2rem; /* 32 */
+  --sp-7: 2.5rem; /* 40 */
+  --sp-8: 3.5rem; /* 56 */
+  --sp-9: 5rem; /* 80 */
+  --sp-10: 4rem; /* 64 — ANVIL parity */
+
+  /* -----------------------------------------------------------------------
+   * Radius
+   * --------------------------------------------------------------------- */
+  --rad-0: 0;
+  --rad-1: 4px;
+  --rad-2: 8px;
+  --rad-3: 12px;
+  --rad-4: 16px;
+  --rad-5: 20px;
+  --rad-tv: 24px;
+  --rad-full: 9999px;
+
+  /* -----------------------------------------------------------------------
+   * Elevation / shadow
+   * --------------------------------------------------------------------- */
+  --shadow-0: 0 0 0 1px rgba(14, 14, 14, 0.06);
+  --shadow-1:
+    0 1px 2px rgba(14, 14, 14, 0.06), 0 0 0 1px rgba(14, 14, 14, 0.05);
+  --shadow-2:
+    0 4px 12px rgba(14, 14, 14, 0.08), 0 0 0 1px rgba(14, 14, 14, 0.06);
+  --shadow-tv-glow:
+    0 0 24px rgba(230, 57, 70, 0.18), 0 0 0 1px rgba(230, 57, 70, 0.4);
+
+  /* -----------------------------------------------------------------------
+   * Motion
+   * --------------------------------------------------------------------- */
+  --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-flash: 80ms;
+  --dur-fast: 160ms;
+  --dur-snap: 220ms;
+  --dur-settle: 360ms;
+}
+
+/* ============================================================================
+ * Dark mode — operator opt-in via [data-theme="dark"] on <html> or <body>.
+ * `prefers-color-scheme: dark` also auto-switches when no explicit theme set.
+ * ========================================================================== */
+
+[data-theme='dark'] {
+  --surface-page: var(--ayo-graphite-2);
+  --surface-1: var(--ayo-graphite);
+  --surface-2: #2c2c2c;
+  --text-primary: #f5ede0;
+  --text-muted: #8a847a;
+  --border-subtle: rgba(245, 237, 224, 0.08);
+  --border-default: rgba(245, 237, 224, 0.16);
+
+  --status-scheduled: rgba(245, 237, 224, 0.6);
+  --status-past: #8a847a;
+  --status-error: #ff6b6b;
+  --status-warning: #fbbf24;
+  --status-success: #4ade80;
+
+  /* Card hairline darkens for dark mode */
+  --shadow-0: 0 0 0 1px rgba(245, 237, 224, 0.06);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 237, 224, 0.06);
+  --shadow-2:
+    0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 237, 224, 0.08);
+}
+
+/* Auto-switch when no explicit data-theme is set on the document. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface-page: var(--ayo-graphite-2);
+    --surface-1: var(--ayo-graphite);
+    --surface-2: #2c2c2c;
+    --text-primary: #f5ede0;
+    --text-muted: #8a847a;
+    --border-subtle: rgba(245, 237, 224, 0.08);
+    --border-default: rgba(245, 237, 224, 0.16);
+
+    --status-scheduled: rgba(245, 237, 224, 0.6);
+    --status-past: #8a847a;
+    --status-error: #ff6b6b;
+    --status-warning: #fbbf24;
+    --status-success: #4ade80;
+
+    --shadow-0: 0 0 0 1px rgba(245, 237, 224, 0.06);
+    --shadow-1:
+      0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 237, 224, 0.06);
+    --shadow-2:
+      0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 237, 224, 0.08);
+  }
+}

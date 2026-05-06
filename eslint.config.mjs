@@ -4,6 +4,9 @@ import tseslint from 'typescript-eslint';
 const legacyGenerated = [
   '.ayoitson/**',
   '.dizquetv/**',
+  // Transient smoke-test backups produced by Lane Alpha integration runs.
+  '.dizquetv-legacy-*/**',
+  '.dizquetv.backup-*/**',
   'bin/**',
   'dist/**',
   'node_modules/**',

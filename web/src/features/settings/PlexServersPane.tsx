@@ -2,11 +2,15 @@ import { FormEvent, useState } from 'react';
 import { Plus, Server, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Panel } from '@/components/ui/panel';
-import { Status } from '@/components/ui/status';
+import {
+  AyoBadge,
+  AyoButton,
+  AyoCard,
+  AyoCheckbox,
+  AyoEmptyState,
+  AyoInput,
+  AyoLabel,
+} from '@/components/ayo';
 import {
   apiClient,
   ApiClientError,
@@ -59,87 +63,107 @@ export function PlexServersPane() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <Panel title="Plex Servers" description="Configured Plex origins.">
-        {servers.isLoading && <Status>Loading Plex servers.</Status>}
-        {servers.isError && (
-          <Status tone="error">{errorText(servers.error)}</Status>
-        )}
-        {servers.isSuccess && servers.data.length === 0 && (
-          <Status>No Plex servers found.</Status>
-        )}
-        {servers.isSuccess && servers.data.length > 0 && (
-          <div className="grid gap-3">
-            {servers.data.map((server) => (
-              <PlexServerRow
-                key={server.name}
-                server={server}
-                onDelete={() => deleteServer.mutate(server.name || '')}
-                disabled={deleteServer.isPending}
-              />
-            ))}
+    <div className="grid gap-sp-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <AyoCard>
+        <AyoCard.Header>
+          <div>
+            <AyoCard.Title>Plex Servers</AyoCard.Title>
+            <AyoCard.Description>Configured Plex origins.</AyoCard.Description>
           </div>
-        )}
-      </Panel>
+        </AyoCard.Header>
+        <AyoCard.Body>
+          {servers.isLoading && (
+            <AyoBadge tone="neutral">Loading Plex servers.</AyoBadge>
+          )}
+          {servers.isError && (
+            <AyoBadge tone="error">{errorText(servers.error)}</AyoBadge>
+          )}
+          {servers.isSuccess && servers.data.length === 0 && (
+            <AyoEmptyState
+              title="No Plex servers yet."
+              description="Add one on the right."
+            />
+          )}
+          {servers.isSuccess && servers.data.length > 0 && (
+            <div className="grid gap-sp-3">
+              {servers.data.map((server) => (
+                <PlexServerRow
+                  key={server.name}
+                  server={server}
+                  onDelete={() => deleteServer.mutate(server.name || '')}
+                  disabled={deleteServer.isPending}
+                />
+              ))}
+            </div>
+          )}
+        </AyoCard.Body>
+      </AyoCard>
 
-      <Panel title="Add Server">
-        <form className="grid gap-3" onSubmit={submit}>
-          <Label htmlFor="plex-name">Name</Label>
-          <Input
-            id="plex-name"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-          />
-          <Label htmlFor="plex-uri">URI</Label>
-          <Input
-            id="plex-uri"
-            value={form.uri}
-            onChange={(event) => setForm({ ...form, uri: event.target.value })}
-          />
-          <Label htmlFor="plex-token">Access token</Label>
-          <Input
-            id="plex-token"
-            type="password"
-            value={form.accessToken}
-            onChange={(event) =>
-              setForm({ ...form, accessToken: event.target.value })
-            }
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(form.arGuide)}
+      <AyoCard>
+        <AyoCard.Header>
+          <AyoCard.Title>Add Server</AyoCard.Title>
+        </AyoCard.Header>
+        <AyoCard.Body>
+          <form className="grid gap-sp-3" onSubmit={submit}>
+            <AyoLabel htmlFor="plex-name">Name</AyoLabel>
+            <AyoInput
+              id="plex-name"
+              value={form.name}
               onChange={(event) =>
-                setForm({ ...form, arGuide: event.target.checked })
+                setForm({ ...form, name: event.target.value })
               }
             />
-            Auto refresh guide
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(form.arChannels)}
+            <AyoLabel htmlFor="plex-uri">URI</AyoLabel>
+            <AyoInput
+              id="plex-uri"
+              value={form.uri}
               onChange={(event) =>
-                setForm({ ...form, arChannels: event.target.checked })
+                setForm({ ...form, uri: event.target.value })
               }
             />
-            Auto refresh channels
-          </label>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={createServer.isPending}
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add server
-          </Button>
-        </form>
-        {createServer.isError && (
-          <div className="mt-4">
-            <Status tone="error">{errorText(createServer.error)}</Status>
-          </div>
-        )}
-      </Panel>
+            <AyoLabel htmlFor="plex-token">Access token</AyoLabel>
+            <AyoInput
+              id="plex-token"
+              type="password"
+              value={form.accessToken}
+              onChange={(event) =>
+                setForm({ ...form, accessToken: event.target.value })
+              }
+            />
+            <label className="flex items-center gap-sp-2 text-14 text-text-primary">
+              <AyoCheckbox
+                checked={Boolean(form.arGuide)}
+                onChange={(event) =>
+                  setForm({ ...form, arGuide: event.target.checked })
+                }
+              />
+              Auto refresh guide
+            </label>
+            <label className="flex items-center gap-sp-2 text-14 text-text-primary">
+              <AyoCheckbox
+                checked={Boolean(form.arChannels)}
+                onChange={(event) =>
+                  setForm({ ...form, arChannels: event.target.checked })
+                }
+              />
+              Auto refresh channels
+            </label>
+            <AyoButton
+              type="submit"
+              variant="primary"
+              disabled={createServer.isPending}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add server
+            </AyoButton>
+          </form>
+          {createServer.isError && (
+            <div className="mt-sp-4">
+              <AyoBadge tone="error">{errorText(createServer.error)}</AyoBadge>
+            </div>
+          )}
+        </AyoCard.Body>
+      </AyoCard>
     </div>
   );
 }
@@ -154,26 +178,26 @@ function PlexServerRow({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-sp-3 rounded-2 border border-border-default bg-surface-page px-sp-4 py-sp-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <Server className="h-4 w-4 text-[hsl(var(--primary))]" />
-          <h3 className="truncate text-sm font-semibold">{server.name}</h3>
+        <div className="flex items-center gap-sp-2">
+          <Server className="h-4 w-4 text-ayo-on-air" aria-hidden="true" />
+          <h3 className="truncate text-14 font-semibold">{server.name}</h3>
         </div>
-        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+        <p className="mt-sp-1 truncate font-mono text-12 text-text-muted">
           {server.uri}
         </p>
       </div>
-      <Button
+      <AyoButton
         type="button"
-        variant="danger"
-        size="sm"
+        variant="accent"
+        size="compact"
         onClick={onDelete}
         disabled={disabled}
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
         Remove
-      </Button>
+      </AyoButton>
     </div>
   );
 }

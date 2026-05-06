@@ -3,7 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ayoitson</title>
+
+    <title>Ayo! It's On</title>
+
+    <!--
+      Favicons + brand icons are generated from web/public/logo-transparent.png
+      by scripts/generate-favicons.mjs and served by the Express static handler
+      at the site root (see index.js). Vite's publicDir is disabled because the
+      legacy AngularJS bundle still co-exists in web/public/.
+    -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+
+    <meta
+      name="theme-color"
+      content="#F5EDE0"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#1A1A1A"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta
+      name="description"
+      content="Ayoitson — your Plex media as live TV channels."
+    />
   </head>
   <body>
     <div id="root"></div>

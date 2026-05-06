@@ -2,11 +2,14 @@ import { FormEvent, useState } from 'react';
 import { KeyRound, Plus, RotateCcw } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Panel } from '@/components/ui/panel';
-import { Status } from '@/components/ui/status';
+import {
+  AyoBadge,
+  AyoButton,
+  AyoCard,
+  AyoEmptyState,
+  AyoInput,
+  AyoLabel,
+} from '@/components/ayo';
 import { apiClient, ApiClientError, ApiKeyMetadata } from '@/lib/api-client';
 
 function errorText(error: unknown) {
@@ -52,58 +55,75 @@ export function ApiKeysPane() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <Panel
-        title="API Keys"
-        description="Active and revoked browser/operator keys."
-      >
-        {keys.isLoading && <Status>Loading keys.</Status>}
-        {keys.isError && <Status tone="error">{errorText(keys.error)}</Status>}
-        {keys.isSuccess && keys.data.length === 0 && (
-          <Status>No API keys found.</Status>
-        )}
-        {keys.isSuccess && keys.data.length > 0 && (
-          <div className="grid gap-3">
-            {keys.data.map((key) => (
-              <ApiKeyRow
-                key={key.id}
-                apiKey={key}
-                onRevoke={() => revokeKey.mutate(key.id)}
-                disabled={revokeKey.isPending || Boolean(key.revokedAt)}
-              />
-            ))}
+    <div className="grid gap-sp-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <AyoCard>
+        <AyoCard.Header>
+          <div>
+            <AyoCard.Title>API Keys</AyoCard.Title>
+            <AyoCard.Description>
+              Active and revoked browser/operator keys.
+            </AyoCard.Description>
           </div>
-        )}
-      </Panel>
+        </AyoCard.Header>
+        <AyoCard.Body>
+          {keys.isLoading && <AyoBadge tone="neutral">Loading keys.</AyoBadge>}
+          {keys.isError && (
+            <AyoBadge tone="error">{errorText(keys.error)}</AyoBadge>
+          )}
+          {keys.isSuccess && keys.data.length === 0 && (
+            <AyoEmptyState
+              title="No API keys yet."
+              description="Mint one on the right to start using the API."
+            />
+          )}
+          {keys.isSuccess && keys.data.length > 0 && (
+            <div className="grid gap-sp-3">
+              {keys.data.map((key) => (
+                <ApiKeyRow
+                  key={key.id}
+                  apiKey={key}
+                  onRevoke={() => revokeKey.mutate(key.id)}
+                  disabled={revokeKey.isPending || Boolean(key.revokedAt)}
+                />
+              ))}
+            </div>
+          )}
+        </AyoCard.Body>
+      </AyoCard>
 
-      <Panel title="Create Key">
-        <form className="grid gap-3" onSubmit={submit}>
-          <Label htmlFor="api-key-name">Name</Label>
-          <Input
-            id="api-key-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={createKey.isPending}
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Create key
-          </Button>
-        </form>
-        <div className="mt-4 grid gap-3">
-          {createKey.isError && (
-            <Status tone="error">{errorText(createKey.error)}</Status>
-          )}
-          {rawKey && (
-            <Status tone="success">
-              <span className="font-mono">{rawKey}</span>
-            </Status>
-          )}
-        </div>
-      </Panel>
+      <AyoCard>
+        <AyoCard.Header>
+          <AyoCard.Title>Create Key</AyoCard.Title>
+        </AyoCard.Header>
+        <AyoCard.Body>
+          <form className="grid gap-sp-3" onSubmit={submit}>
+            <AyoLabel htmlFor="api-key-name">Name</AyoLabel>
+            <AyoInput
+              id="api-key-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <AyoButton
+              type="submit"
+              variant="primary"
+              disabled={createKey.isPending}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create key
+            </AyoButton>
+          </form>
+          <div className="mt-sp-4 grid gap-sp-3">
+            {createKey.isError && (
+              <AyoBadge tone="error">{errorText(createKey.error)}</AyoBadge>
+            )}
+            {rawKey && (
+              <AyoBadge tone="success">
+                <span className="font-mono">{rawKey}</span>
+              </AyoBadge>
+            )}
+          </div>
+        </AyoCard.Body>
+      </AyoCard>
     </div>
   );
 }
@@ -118,29 +138,27 @@ function ApiKeyRow({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-sp-3 rounded-2 border border-border-default bg-surface-page px-sp-4 py-sp-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-[hsl(var(--primary))]" />
-          <h3 className="truncate text-sm font-semibold">{apiKey.name}</h3>
+        <div className="flex items-center gap-sp-2">
+          <KeyRound className="h-4 w-4 text-ayo-on-air" aria-hidden="true" />
+          <h3 className="truncate text-14 font-semibold">{apiKey.name}</h3>
         </div>
-        <p className="mt-1 font-mono text-xs text-muted-foreground">
-          {apiKey.id}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-sp-1 font-mono text-12 text-text-muted">{apiKey.id}</p>
+        <p className="mt-sp-1 text-12 text-text-muted">
           Last used: {formatDate(apiKey.lastUsedAt)}
         </p>
       </div>
-      <Button
+      <AyoButton
         type="button"
-        variant={apiKey.revokedAt ? 'secondary' : 'danger'}
-        size="sm"
+        variant={apiKey.revokedAt ? 'secondary' : 'accent'}
+        size="compact"
         onClick={onRevoke}
         disabled={disabled}
       >
         <RotateCcw className="h-4 w-4" aria-hidden="true" />
         {apiKey.revokedAt ? 'Revoked' : 'Revoke'}
-      </Button>
+      </AyoButton>
     </div>
   );
 }

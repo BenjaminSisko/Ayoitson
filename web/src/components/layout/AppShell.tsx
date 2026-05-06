@@ -1,52 +1,59 @@
 import { KeyRound, MonitorCog, Server } from 'lucide-react';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AyoLogo,
+  AyoTabs,
+  AyoTabsContent,
+  AyoTabsList,
+  AyoTabsTrigger,
+} from '@/components/ayo';
 import { ApiKeysPane } from '@/features/settings/ApiKeysPane';
 import { FfmpegPane } from '@/features/settings/FfmpegPane';
 import { PlexServersPane } from '@/features/settings/PlexServersPane';
 
 export function AppShell() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--accent))]">
-            Ayoitson v2
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal sm:text-3xl">
-            Settings
-          </h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-sp-5 px-sp-4 py-sp-5 sm:px-sp-5 lg:px-sp-7">
+      <header className="flex flex-col gap-sp-3 border-b border-border-subtle pb-sp-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex items-center gap-sp-3">
+          <AyoLogo size="md" variant="icon-only" />
+          <div>
+            <p className="text-11 font-bold uppercase tracking-wide text-ayo-on-air">
+              Ayoitson v2
+            </p>
+            <h1 className="mt-sp-1 text-display font-display">Settings</h1>
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-14 text-text-muted">
           React shell mounted at <span className="font-mono">/v2</span>
         </div>
       </header>
 
-      <Tabs defaultValue="api-keys">
-        <TabsList aria-label="Settings panes">
-          <TabsTrigger value="api-keys">
+      <AyoTabs defaultValue="api-keys">
+        <AyoTabsList aria-label="Settings panes">
+          <AyoTabsTrigger value="api-keys">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
             API Keys
-          </TabsTrigger>
-          <TabsTrigger value="plex">
+          </AyoTabsTrigger>
+          <AyoTabsTrigger value="plex">
             <Server className="h-4 w-4" aria-hidden="true" />
             Plex
-          </TabsTrigger>
-          <TabsTrigger value="ffmpeg">
+          </AyoTabsTrigger>
+          <AyoTabsTrigger value="ffmpeg">
             <MonitorCog className="h-4 w-4" aria-hidden="true" />
             FFmpeg
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="api-keys">
+          </AyoTabsTrigger>
+        </AyoTabsList>
+        <AyoTabsContent value="api-keys">
           <ApiKeysPane />
-        </TabsContent>
-        <TabsContent value="plex">
+        </AyoTabsContent>
+        <AyoTabsContent value="plex">
           <PlexServersPane />
-        </TabsContent>
-        <TabsContent value="ffmpeg">
+        </AyoTabsContent>
+        <AyoTabsContent value="ffmpeg">
           <FfmpegPane />
-        </TabsContent>
-      </Tabs>
+        </AyoTabsContent>
+      </AyoTabs>
     </main>
   );
 }

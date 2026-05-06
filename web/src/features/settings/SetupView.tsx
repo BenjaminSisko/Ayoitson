@@ -2,11 +2,14 @@ import { FormEvent, useState } from 'react';
 import { KeyRound, LogIn } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Panel } from '@/components/ui/panel';
-import { Status } from '@/components/ui/status';
+import {
+  AyoButton,
+  AyoCard,
+  AyoInput,
+  AyoLabel,
+  AyoLogo,
+  AyoBadge,
+} from '@/components/ayo';
 import { apiClient, ApiClientError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 
@@ -39,64 +42,73 @@ export function SetupView() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-4 py-8">
-      <Panel
-        title="Connect to Ayoitson"
-        description="Set the browser API key for this workstation."
-        className="w-full"
-      >
-        <div className="grid gap-5">
-          <form
-            className="grid gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setup.mutate();
-            }}
-          >
-            <Label htmlFor="setup-key-name">Initial key name</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="setup-key-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={setup.isPending}
-              >
-                <KeyRound className="h-4 w-4" aria-hidden="true" />
-                Create
-              </Button>
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-sp-4 py-sp-7">
+      <AyoCard className="w-full">
+        <AyoCard.Header>
+          <div className="flex items-center gap-sp-3">
+            <AyoLogo size="sm" variant="icon-only" />
+            <div>
+              <AyoCard.Title as="h2">Connect to Ayoitson</AyoCard.Title>
+              <AyoCard.Description>
+                Set the browser API key for this workstation.
+              </AyoCard.Description>
             </div>
-          </form>
+          </div>
+        </AyoCard.Header>
+        <AyoCard.Body>
+          <div className="grid gap-sp-5">
+            <form
+              className="grid gap-sp-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setup.mutate();
+              }}
+            >
+              <AyoLabel htmlFor="setup-key-name">Initial key name</AyoLabel>
+              <div className="flex flex-col gap-sp-2 sm:flex-row">
+                <AyoInput
+                  id="setup-key-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <AyoButton
+                  type="submit"
+                  variant="primary"
+                  disabled={setup.isPending}
+                >
+                  <KeyRound className="h-4 w-4" aria-hidden="true" />
+                  Create
+                </AyoButton>
+              </div>
+            </form>
 
-          <form className="grid gap-3" onSubmit={submitExisting}>
-            <Label htmlFor="existing-key">Existing API key</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="existing-key"
-                type="password"
-                value={existingKey}
-                onChange={(event) => setExistingKey(event.target.value)}
-              />
-              <Button type="submit">
-                <LogIn className="h-4 w-4" aria-hidden="true" />
-                Use key
-              </Button>
-            </div>
-          </form>
+            <form className="grid gap-sp-3" onSubmit={submitExisting}>
+              <AyoLabel htmlFor="existing-key">Existing API key</AyoLabel>
+              <div className="flex flex-col gap-sp-2 sm:flex-row">
+                <AyoInput
+                  id="existing-key"
+                  type="password"
+                  value={existingKey}
+                  onChange={(event) => setExistingKey(event.target.value)}
+                />
+                <AyoButton type="submit">
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  Use key
+                </AyoButton>
+              </div>
+            </form>
 
-          {setup.isError && (
-            <Status tone="error">{errorText(setup.error)}</Status>
-          )}
-          {createdKey && (
-            <Status tone="success">
-              <span className="font-mono">{createdKey}</span>
-            </Status>
-          )}
-        </div>
-      </Panel>
+            {setup.isError && (
+              <AyoBadge tone="error">{errorText(setup.error)}</AyoBadge>
+            )}
+            {createdKey && (
+              <AyoBadge tone="success">
+                <span className="font-mono">{createdKey}</span>
+              </AyoBadge>
+            )}
+          </div>
+        </AyoCard.Body>
+      </AyoCard>
     </main>
   );
 }
