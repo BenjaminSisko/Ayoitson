@@ -1,12 +1,10 @@
 
 > dizquetv@0.4.0 migrate:db
-> node scripts/migrate-diskdb-to-sqlite.js --archive-legacy
+> node scripts/migrate-diskdb-to-sqlite.js --source /Users/benny/Documents/New project 5/Ayoitson/.dizquetv.backup-pre-codex-smoke-2026-05-06 --target /Users/benny/Documents/New project 5/Ayoitson/.ayoitson
 
 {
-  "skipped": false,
-  "sourceDir": "/Users/benny/Documents/New project 5/Ayoitson/.dizquetv",
-  "targetDir": "/Users/benny/Documents/New project 5/Ayoitson/.ayoitson",
-  "legacyArchivePath": "/Users/benny/Documents/New project 5/Ayoitson/.dizquetv-legacy-2026-05-06T15-30-40-409Z",
+  "skipped": true,
+  "reason": "SQLite migration already completed",
   "counts": {
     "channels": 1,
     "programs": 34,
@@ -18,7 +16,5 @@
     "settings": 8,
     "playTimes": 1,
     "cacheImages": 0
-  },
-  "warning": "/Users/benny/Documents/New project 5/Ayoitson/.dizquetv-legacy-2026-05-06T15-30-40-409Z contains plaintext Plex tokens. Verify the SQLite database, then delete the legacy folder."
+  }
 }
-/Users/benny/Documents/New project 5/Ayoitson/.dizquetv-legacy-2026-05-06T15-30-40-409Z contains plaintext Plex tokens. Verify the SQLite database, then delete the legacy folder.

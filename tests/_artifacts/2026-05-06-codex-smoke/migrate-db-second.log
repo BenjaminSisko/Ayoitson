@@ -1,6 +1,6 @@
 
 > dizquetv@0.4.0 migrate:db
-> node scripts/migrate-diskdb-to-sqlite.js
+> node scripts/migrate-diskdb-to-sqlite.js --source /Users/benny/Documents/New project 5/Ayoitson/.dizquetv.backup-pre-codex-smoke-2026-05-06 --target /Users/benny/Documents/New project 5/Ayoitson/.ayoitson
 
 {
   "skipped": true,
