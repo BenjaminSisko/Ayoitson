@@ -5,6 +5,10 @@ export type ApiErrorBody = components['schemas']['Error'];
 export type CreatedKey = components['schemas']['CreatedKey'];
 export type PlexServerPublic = components['schemas']['PlexServerPublic'];
 export type PlexServerCreate = components['schemas']['PlexServerCreate'];
+export type ChannelSummary = components['schemas']['ChannelSummary'];
+export type Channel = components['schemas']['Channel'];
+export type ChannelCreate = components['schemas']['Channel'];
+export type XmltvSettings = components['schemas']['XmltvSettings'];
 
 export type ApiKeyMetadata = {
   id: string;
@@ -25,6 +29,13 @@ export type FfmpegSettings = Record<string, unknown> & {
   maxFPS?: number;
   maxFrameBuffer?: number;
 };
+
+export type HdhrSettings = Record<string, unknown> & {
+  tunerCount?: number;
+  autoDiscoveryEnabled?: boolean;
+};
+
+export type GuideLineup = Record<string, unknown>;
 
 type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
   body?: unknown;
@@ -142,5 +153,62 @@ export const apiClient = {
       method: 'PUT',
       body: settings,
     });
+  },
+
+  getXmltvSettings() {
+    return request<XmltvSettings>('/api/settings/xmltv');
+  },
+
+  updateXmltvSettings(settings: XmltvSettings) {
+    return request<XmltvSettings>('/api/settings/xmltv', {
+      method: 'PUT',
+      body: settings,
+    });
+  },
+
+  getHdhrSettings() {
+    return request<HdhrSettings>('/api/settings/hdhr');
+  },
+
+  updateHdhrSettings(settings: HdhrSettings) {
+    return request<HdhrSettings>('/api/settings/hdhr', {
+      method: 'PUT',
+      body: settings,
+    });
+  },
+
+  listChannels() {
+    return request<ChannelSummary[]>('/api/channels');
+  },
+
+  createChannel(channel: ChannelCreate) {
+    return request<{ number: number }>('/api/channels', {
+      method: 'POST',
+      body: channel,
+    });
+  },
+
+  getChannel(number: number, options: { programless?: boolean } = {}) {
+    const search = options.programless ? '?programless=true' : '';
+    return request<Channel>(
+      '/api/channels/' + encodeURIComponent(String(number)) + search
+    );
+  },
+
+  deleteChannel(number: number) {
+    return request<{ deleted?: boolean; number?: number }>(
+      '/api/channels/' + encodeURIComponent(String(number)),
+      { method: 'DELETE' }
+    );
+  },
+
+  getGuideChannel(number: number, dateFrom: string, dateTo: string) {
+    const query = new URLSearchParams({ dateFrom, dateTo });
+    return request<GuideLineup>(
+      '/api/guide/channels/' +
+        encodeURIComponent(String(number)) +
+        '?' +
+        query.toString()
+    );
   },
 };
