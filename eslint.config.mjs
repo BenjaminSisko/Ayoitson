@@ -3,6 +3,7 @@ import prettier from 'eslint-config-prettier';
 const legacyGenerated = [
   'bin/**',
   'dist/**',
+  '.dizquetv/**',
   'node_modules/**',
   'package-lock.json',
   'web/public/bundle.js',

@@ -138,10 +138,28 @@ function buildHttpResponse(response, body) {
 async function validateOutboundUrl(url, opts = {}) {
   const parsed = parseHttpUrl(url);
   const hostname = normalizeHostname(parsed.hostname);
+  const allowlistEntry = getMatchingAllowlistEntry(parsed, opts);
+
+  if (isBrowserRuntime()) {
+    if (!allowlistEntry) {
+      throw new HttpRequestError(
+        `Outbound URL is not allowlisted: ${parsed.origin}`,
+        {
+          origin: parsed.origin,
+        }
+      );
+    }
+
+    return;
+  }
+
   const addresses = await resolveAddresses(hostname, opts);
 
   for (const address of addresses) {
-    if (isPrivateAddress(address.address)) {
+    if (
+      isPrivateAddress(address.address) &&
+      !allowlistEntry?.allowPrivateNetwork
+    ) {
       throw new HttpRequestError(
         `Blocked outbound request to private address ${address.address}`,
         {
@@ -151,7 +169,7 @@ async function validateOutboundUrl(url, opts = {}) {
     }
   }
 
-  if (!isAllowedUrl(parsed, opts)) {
+  if (!allowlistEntry) {
     throw new HttpRequestError(
       `Outbound URL is not allowlisted: ${parsed.origin}`,
       {
@@ -239,16 +257,20 @@ async function resolveAddresses(hostname, opts = {}) {
 }
 
 function isAllowedUrl(url, opts = {}) {
+  return Boolean(getMatchingAllowlistEntry(url, opts));
+}
+
+function getMatchingAllowlistEntry(url, opts = {}) {
   const allowlist = buildAllowlist(opts);
 
-  return allowlist.some((entry) => matchesAllowlistEntry(url, entry));
+  return allowlist.find((entry) => matchesAllowlistEntry(url, entry));
 }
 
 function buildAllowlist(opts = {}) {
   const entries = [
     { hostname: 'plex.tv', includeSubdomains: true },
     ...readConfiguredPlexServerUris(opts.databaseDir).map((uri) =>
-      normalizeAllowlistEntry(uri)
+      normalizeAllowlistEntry(uri, { allowPrivateNetwork: true })
     ),
   ];
 
@@ -262,6 +284,10 @@ function buildAllowlist(opts = {}) {
 }
 
 function readConfiguredPlexServerUris(databaseDir = process.env.DATABASE) {
+  if (isBrowserRuntime() || typeof fs.existsSync !== 'function') {
+    return [];
+  }
+
   const baseDir = databaseDir || path.join(process.cwd(), '.dizquetv');
   const serverPath = path.join(baseDir, 'plex-servers.json');
 
@@ -281,13 +307,13 @@ function readConfiguredPlexServerUris(databaseDir = process.env.DATABASE) {
   }
 }
 
-function normalizeAllowlistEntry(entry) {
+function normalizeAllowlistEntry(entry, defaults = {}) {
   if (!entry) {
     return null;
   }
 
   if (entry instanceof URL) {
-    return urlToAllowlistEntry(entry);
+    return urlToAllowlistEntry(entry, defaults);
   }
 
   if (typeof entry === 'object' && entry.hostname) {
@@ -296,19 +322,23 @@ function normalizeAllowlistEntry(entry) {
       hostname: normalizeHostname(entry.hostname),
       port: entry.port ? String(entry.port) : undefined,
       includeSubdomains: Boolean(entry.includeSubdomains),
+      allowPrivateNetwork: Boolean(
+        entry.allowPrivateNetwork ?? defaults.allowPrivateNetwork
+      ),
     };
   }
 
   const value = String(entry);
   const url = new URL(value.includes('://') ? value : `https://${value}`);
-  return urlToAllowlistEntry(url);
+  return urlToAllowlistEntry(url, defaults);
 }
 
-function urlToAllowlistEntry(url) {
+function urlToAllowlistEntry(url, defaults = {}) {
   return {
     protocol: url.protocol,
     hostname: normalizeHostname(url.hostname),
     port: url.port,
+    allowPrivateNetwork: Boolean(defaults.allowPrivateNetwork),
   };
 }
 
@@ -425,6 +455,12 @@ function getFetch(opts = {}) {
   return opts.fetchImpl || fetch;
 }
 
+function isBrowserRuntime() {
+  return (
+    typeof window !== 'undefined' && typeof window.document !== 'undefined'
+  );
+}
+
 function linkAbortSignal(sourceSignal, controller) {
   if (!sourceSignal) {
     return () => undefined;
@@ -461,6 +497,7 @@ module.exports = {
   __test: {
     buildAllowlist,
     isPrivateAddress,
+    isBrowserRuntime,
     redactHeaders,
     validateOutboundUrl,
   },

@@ -35,16 +35,29 @@ describe('Phase 2 Plex HTTP wrapper migration', () => {
     expect(init.headers['X-Plex-Token']).toBe('fixture-token');
   });
 
-  test('Plex requests reject private server URIs before fetch', async () => {
-    const fetchImpl = vi.fn();
+  test('Plex requests allow operator-configured private server URIs', async () => {
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ MediaContainer: { size: 1 } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
     const plex = new Plex({
       uri: 'http://10.0.0.1:32400',
       accessToken: 'fixture-token',
       fetchImpl,
     });
 
-    await expect(plex.Get('/')).rejects.toThrow(/private address 10\.0\.0\.1/);
-    expect(fetchImpl).not.toHaveBeenCalled();
+    const container = await plex.Get('/');
+
+    expect(container).toEqual({ size: 1 });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://10.0.0.1:32400/',
+      expect.objectContaining({
+        method: 'GET',
+        redirect: 'manual',
+      })
+    );
   });
 
   test('Plex Put preserves method and query parameters through the wrapper', async () => {

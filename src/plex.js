@@ -93,8 +93,14 @@ class Plex {
   }
 
   getHttpOptions(overrides = {}) {
+    const serverUrl = new URL(this.URL);
     const allowlist = [
-      this.URL,
+      {
+        protocol: serverUrl.protocol,
+        hostname: serverUrl.hostname,
+        port: serverUrl.port,
+        allowPrivateNetwork: true,
+      },
       ...(Array.isArray(this._httpOptions.allowlist)
         ? this._httpOptions.allowlist
         : []),

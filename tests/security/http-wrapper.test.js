@@ -115,6 +115,103 @@ describe('Phase 2 SSRF-defended HTTP wrapper', () => {
     }
   });
 
+  test('allows configured Plex server URIs that resolve to LAN addresses', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ayoitson-http-'));
+    fs.writeFileSync(
+      path.join(tempRoot, 'plex-servers.json'),
+      JSON.stringify([
+        {
+          name: 'plex',
+          uri: 'https://192-168-1-117.fixture.plex.direct:32400',
+        },
+      ])
+    );
+
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    try {
+      const response = await httpGet(
+        'https://192-168-1-117.fixture.plex.direct:32400/status',
+        {
+          databaseDir: tempRoot,
+          fetchImpl,
+          resolveHost: resolveTo('192.168.1.117'),
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.data).toEqual({ ok: true });
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('allows explicit Plex server allowlist entries to resolve to LAN addresses', async () => {
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    const response = await httpGet('http://plex.local:32400/status', {
+      allowlist: [
+        {
+          protocol: 'http:',
+          hostname: 'plex.local',
+          port: '32400',
+          allowPrivateNetwork: true,
+        },
+      ],
+      fetchImpl,
+      resolveHost: resolveTo('192.168.1.117'),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual({ ok: true });
+  });
+
+  test('browser runtime skips Node DNS checks for explicit Plex allowlist entries', async () => {
+    const previousWindow = global.window;
+    global.window = { document: {} };
+
+    const resolveHost = vi.fn(async () => {
+      throw new Error('browser cannot resolve DNS');
+    });
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    try {
+      const response = await httpGet('http://plex.local:32400/status', {
+        allowlist: [
+          {
+            protocol: 'http:',
+            hostname: 'plex.local',
+            port: '32400',
+            allowPrivateNetwork: true,
+          },
+        ],
+        fetchImpl,
+        resolveHost,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data).toEqual({ ok: true });
+      expect(resolveHost).not.toHaveBeenCalled();
+    } finally {
+      global.window = previousWindow;
+    }
+  });
+
   test('httpPost sends JSON with manual redirects disabled', async () => {
     const fetchImpl = vi.fn(async () => {
       return new Response(null, { status: 204 });
