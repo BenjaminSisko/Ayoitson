@@ -23,7 +23,7 @@ describe('Lane Gamma Phase 1 FFmpeg hot-fixes', () => {
   test('concat protocol whitelist excludes local file access', () => {
     const ffmpegSource = source('src/ffmpeg.js');
     const whitelistMatch = ffmpegSource.match(
-      /-protocol_whitelist`, `([^`]+)`/
+      /['"`]-protocol_whitelist['"`],\s*['"`]([^'"`]+)['"`]/
     );
 
     expect(whitelistMatch && whitelistMatch[1]).toBe('http,tcp,https,tls');
