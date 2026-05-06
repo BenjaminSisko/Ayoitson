@@ -1,5 +1,14 @@
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Film, Library, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronsLeft,
+  ChevronsRight,
+  GripVertical,
+  Library,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 
 import {
   AyoBadge,
@@ -20,8 +29,7 @@ import {
   programTitle,
 } from '@/features/channels/channel-model';
 
-const INITIAL_VISIBLE = 60;
-const VISIBLE_STEP = 60;
+const WINDOW_SIZE = 80;
 
 export function ProgramList({
   programs,
@@ -32,14 +40,21 @@ export function ProgramList({
 }) {
   const [offlineTitle, setOfflineTitle] = useState('Offline block');
   const [offlineMinutes, setOfflineMinutes] = useState('30');
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [windowStart, setWindowStart] = useState(0);
   const [showPlexBrowser, setShowPlexBrowser] = useState(false);
-  const visiblePrograms = programs.slice(0, visibleCount);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const windowEnd = Math.min(programs.length, windowStart + WINDOW_SIZE);
+  const visiblePrograms = programs.slice(windowStart, windowEnd);
   const totalDuration = useMemo(
     () =>
       programs.reduce((total, program) => total + programDuration(program), 0),
     [programs]
   );
+  const windowed = programs.length > WINDOW_SIZE;
+
+  useEffect(() => {
+    setWindowStart((current) => clampWindowStart(current, programs.length));
+  }, [programs.length]);
 
   function addOfflineProgram() {
     onChange([
@@ -56,14 +71,28 @@ export function ProgramList({
   function moveProgram(index: number, direction: -1 | 1) {
     const target = index + direction;
     if (target < 0 || target >= programs.length) return;
-    const next = [...programs];
-    const [item] = next.splice(index, 1);
-    next.splice(target, 0, item);
-    onChange(next);
+    onChange(reorderPrograms(programs, index, target));
+    setWindowStart((current) => keepIndexInWindow(target, current));
+  }
+
+  function dropProgram(targetIndex: number) {
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+    onChange(reorderPrograms(programs, draggedIndex, targetIndex));
+    setWindowStart((current) => keepIndexInWindow(targetIndex, current));
+    setDraggedIndex(null);
   }
 
   function removeProgram(index: number) {
     onChange(programs.filter((_, candidate) => candidate !== index));
+  }
+
+  function pageWindow(direction: -1 | 1) {
+    setWindowStart((current) =>
+      clampWindowStart(current + direction * WINDOW_SIZE, programs.length)
+    );
   }
 
   return (
@@ -71,8 +100,13 @@ export function ProgramList({
       <div className="flex flex-wrap gap-sp-2">
         <AyoBadge tone="neutral">{programs.length} programs</AyoBadge>
         <AyoBadge tone="scheduled">{formatDuration(totalDuration)}</AyoBadge>
-        {programs.length > visiblePrograms.length && (
-          <AyoBadge tone="neutral">{visiblePrograms.length} rendered</AyoBadge>
+        {windowed && (
+          <>
+            <AyoBadge tone="neutral">
+              Showing {windowStart + 1}-{windowEnd} of {programs.length}
+            </AyoBadge>
+            <AyoBadge tone="success">Windowed rendering</AyoBadge>
+          </>
         )}
       </div>
 
@@ -118,30 +152,56 @@ export function ProgramList({
           description="Add an offline block or select from Plex."
         />
       ) : (
-        <div className="grid max-h-[38rem] gap-sp-2 overflow-y-auto pr-sp-1">
-          {visiblePrograms.map((program, index) => (
-            <ProgramRow
-              key={`${programTitle(program)}-${index}`}
-              index={index}
-              program={program}
-              disableUp={index === 0}
-              disableDown={index === programs.length - 1}
-              onMove={moveProgram}
-              onRemove={removeProgram}
-            />
-          ))}
-          {programs.length > visiblePrograms.length && (
-            <AyoButton
-              variant="ghost"
-              onClick={() =>
-                setVisibleCount((count) =>
-                  Math.min(programs.length, count + VISIBLE_STEP)
-                )
-              }
-            >
-              Show more
-            </AyoButton>
+        <div className="grid gap-sp-3">
+          {windowed && (
+            <div className="flex flex-wrap items-center justify-between gap-sp-2 rounded-3 border border-border-default bg-surface-page p-sp-3">
+              <p className="text-13 text-text-muted">
+                Large lineups render in fixed windows so the editor stays
+                responsive while you reorder.
+              </p>
+              <div className="flex flex-wrap gap-sp-2">
+                <AyoButton
+                  variant="ghost"
+                  size="compact"
+                  disabled={windowStart === 0}
+                  onClick={() => pageWindow(-1)}
+                >
+                  <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+                  Previous window
+                </AyoButton>
+                <AyoButton
+                  variant="ghost"
+                  size="compact"
+                  disabled={windowEnd >= programs.length}
+                  onClick={() => pageWindow(1)}
+                >
+                  Next window
+                  <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+                </AyoButton>
+              </div>
+            </div>
           )}
+          <div className="grid max-h-[38rem] gap-sp-2 overflow-y-auto pr-sp-1">
+            {visiblePrograms.map((program, visibleIndex) => {
+              const index = windowStart + visibleIndex;
+              return (
+                <ProgramRow
+                  key={programKey(program, index)}
+                  index={index}
+                  displayIndex={index + 1}
+                  program={program}
+                  dragging={draggedIndex === index}
+                  disableUp={index === 0}
+                  disableDown={index === programs.length - 1}
+                  onDragStart={setDraggedIndex}
+                  onDrop={dropProgram}
+                  onDragCancel={() => setDraggedIndex(null)}
+                  onMove={moveProgram}
+                  onRemove={removeProgram}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -150,30 +210,66 @@ export function ProgramList({
 
 function ProgramRow({
   index,
+  displayIndex,
   program,
+  dragging,
   disableUp,
   disableDown,
+  onDragStart,
+  onDrop,
+  onDragCancel,
   onMove,
   onRemove,
 }: {
   index: number;
+  displayIndex: number;
   program: ChannelProgram;
+  dragging: boolean;
   disableUp: boolean;
   disableDown: boolean;
+  onDragStart: (index: number) => void;
+  onDrop: (index: number) => void;
+  onDragCancel: () => void;
   onMove: (index: number, direction: -1 | 1) => void;
   onRemove: (index: number) => void;
 }) {
+  const title = programTitle(program);
   return (
-    <AyoCard as="article" className="bg-surface-page">
+    <AyoCard
+      as="article"
+      draggable
+      aria-label={`Program ${displayIndex}: ${title}`}
+      className={[
+        'bg-surface-page transition-colors',
+        dragging ? 'border border-ayo-on-air shadow-tv-glow' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+        onDragStart(index);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop(index);
+      }}
+      onDragEnd={onDragCancel}
+    >
       <div className="grid gap-sp-3 p-sp-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
         <div className="grid h-12 w-12 place-items-center rounded-tv bg-surface-2 text-ayo-on-air">
-          <Film className="h-5 w-5" aria-hidden="true" />
+          <GripVertical className="h-5 w-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
           <h4 className="truncate text-15 font-semibold text-text-primary">
-            {programTitle(program)}
+            {title}
           </h4>
           <p className="mt-sp-1 flex flex-wrap gap-sp-2 text-12 text-text-muted">
+            <span>#{displayIndex}</span>
             <span>{programSource(program)}</span>
             <span>{formatDuration(programDuration(program))}</span>
           </p>
@@ -182,7 +278,7 @@ function ProgramRow({
           <AyoButton
             size="icon"
             variant="ghost"
-            aria-label={`Move ${programTitle(program)} up`}
+            aria-label={`Move ${title} up`}
             disabled={disableUp}
             onClick={() => onMove(index, -1)}
           >
@@ -191,7 +287,7 @@ function ProgramRow({
           <AyoButton
             size="icon"
             variant="ghost"
-            aria-label={`Move ${programTitle(program)} down`}
+            aria-label={`Move ${title} down`}
             disabled={disableDown}
             onClick={() => onMove(index, 1)}
           >
@@ -200,7 +296,7 @@ function ProgramRow({
           <AyoButton
             size="icon"
             variant="accent"
-            aria-label={`Remove ${programTitle(program)}`}
+            aria-label={`Remove ${title}`}
             onClick={() => onRemove(index)}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -219,4 +315,31 @@ function plexItemToProgram(item: PlexBrowserItem): ChannelProgram {
     source: 'plex',
     key: item.id,
   };
+}
+
+function reorderPrograms(
+  programs: ChannelProgram[],
+  fromIndex: number,
+  toIndex: number
+) {
+  const next = [...programs];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
+function clampWindowStart(candidate: number, programCount: number) {
+  if (programCount <= WINDOW_SIZE) return 0;
+  const maxStart = Math.max(0, programCount - WINDOW_SIZE);
+  return Math.min(Math.max(0, candidate), maxStart);
+}
+
+function keepIndexInWindow(index: number, currentStart: number) {
+  if (index < currentStart) return index;
+  if (index >= currentStart + WINDOW_SIZE) return index - WINDOW_SIZE + 1;
+  return currentStart;
+}
+
+function programKey(program: ChannelProgram, index: number) {
+  return String(program.key || program.ratingKey || program.title || index);
 }
