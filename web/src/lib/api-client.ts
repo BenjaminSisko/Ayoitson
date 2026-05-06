@@ -64,6 +64,9 @@ export type HdhrSettings = Record<string, unknown> & {
 };
 
 export type GuideLineup = Record<string, unknown>;
+export type XmltvOutputLocation = {
+  file?: string;
+};
 type ChannelSummaryResponse = Array<ChannelSummary | number | string>;
 
 type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
@@ -216,6 +219,12 @@ export const apiClient = {
       method: 'PUT',
       body: settings,
     });
+  },
+
+  getXmltvOutputLocation() {
+    // The modern settings API strips `file`; this legacy shim exposes the
+    // sanitized server-managed output path for read-only operator display.
+    return request<XmltvOutputLocation>('/api/xmltv-settings');
   },
 
   getHdhrSettings() {

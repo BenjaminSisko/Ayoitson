@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { Save } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Copy, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -25,14 +25,68 @@ function numberOrUndefined(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function ReadOnlyLocationField({
+  id,
+  label,
+  value,
+  disabled,
+  onCopy,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="grid gap-sp-2">
+      <AyoLabel htmlFor={id}>{label}</AyoLabel>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-sp-2">
+        <div
+          id={id}
+          role="textbox"
+          aria-readonly="true"
+          tabIndex={0}
+          className="min-h-9 w-full break-all rounded-2 border border-border-default bg-surface-1 px-sp-3 py-sp-2 font-mono text-13 text-text-primary"
+        >
+          {value}
+        </div>
+        <AyoButton
+          type="button"
+          variant="secondary"
+          size="icon"
+          title={`Copy ${label}`}
+          aria-label={`Copy ${label}`}
+          disabled={disabled}
+          onClick={onCopy}
+        >
+          <Copy className="h-4 w-4" aria-hidden="true" />
+        </AyoButton>
+      </div>
+    </div>
+  );
+}
+
 export function XmltvPane() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<XmltvSettings>({});
+  const [copied, setCopied] = useState<string | null>(null);
 
   const settings = useQuery({
     queryKey: ['settings', 'xmltv'],
     queryFn: apiClient.getXmltvSettings,
   });
+
+  const outputLocation = useQuery({
+    queryKey: ['settings', 'xmltv', 'output-location'],
+    queryFn: apiClient.getXmltvOutputLocation,
+    retry: false,
+  });
+
+  const epgUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '/api/guide/xmltv.xml';
+    return new URL('/api/guide/xmltv.xml', window.location.origin).toString();
+  }, []);
 
   useEffect(() => {
     if (settings.data) {
@@ -53,6 +107,18 @@ export function XmltvPane() {
     save.mutate();
   }
 
+  async function copyValue(label: string, value: string) {
+    if (!navigator.clipboard) return;
+    await navigator.clipboard.writeText(value);
+    setCopied(label);
+  }
+
+  const outputFile =
+    outputLocation.data?.file ||
+    (outputLocation.isLoading
+      ? 'Loading output path.'
+      : 'Server-managed xmltv.xml');
+
   return (
     <AyoCard>
       <AyoCard.Header>
@@ -72,6 +138,26 @@ export function XmltvPane() {
         )}
         {settings.isSuccess && (
           <form className="grid max-w-3xl gap-sp-4" onSubmit={submit}>
+            <div className="grid gap-sp-4">
+              <ReadOnlyLocationField
+                id="xmltv-output-path"
+                label="EPG output path"
+                value={outputFile}
+                disabled={!outputLocation.data?.file}
+                onCopy={() =>
+                  outputLocation.data?.file &&
+                  copyValue('output path', outputLocation.data.file)
+                }
+              />
+              <ReadOnlyLocationField
+                id="xmltv-api-url"
+                label="EPG XML URL"
+                value={epgUrl}
+                onCopy={() => copyValue('XML URL', epgUrl)}
+              />
+              {copied && <AyoBadge tone="success">Copied {copied}.</AyoBadge>}
+            </div>
+
             <div className="grid gap-sp-2 sm:grid-cols-2">
               <div className="grid gap-sp-2">
                 <AyoLabel htmlFor="xmltv-refresh">Refresh hours</AyoLabel>

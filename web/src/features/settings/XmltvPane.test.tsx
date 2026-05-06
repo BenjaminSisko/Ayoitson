@@ -12,6 +12,7 @@ vi.mock('@/lib/api-client', () => ({
   apiClient: {
     getXmltvSettings: vi.fn(),
     updateXmltvSettings: vi.fn(),
+    getXmltvOutputLocation: vi.fn(),
   },
 }));
 
@@ -26,6 +27,9 @@ describe('XmltvPane', () => {
       cache: 7,
       enableImageCache: false,
     });
+    mockedApi.getXmltvOutputLocation.mockResolvedValue({
+      file: '/Users/benny/Documents/New project 5/Ayoitson/.ayoitson/xmltv.xml',
+    });
     mockedApi.updateXmltvSettings.mockImplementation(
       async (settings) => settings
     );
@@ -36,6 +40,17 @@ describe('XmltvPane', () => {
     renderWithClient(<XmltvPane />);
 
     expect(await screen.findByDisplayValue('4')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '/Users/benny/Documents/New project 5/Ayoitson/.ayoitson/xmltv.xml'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('http://localhost:3000/api/guide/xmltv.xml')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Copy EPG XML URL' })
+    ).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Refresh hours'));
     await user.type(screen.getByLabelText('Refresh hours'), '8');
