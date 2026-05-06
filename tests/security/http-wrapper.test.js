@@ -134,6 +134,21 @@ describe('Phase 2 SSRF-defended HTTP wrapper', () => {
     expect(init.body).toBe(JSON.stringify({ ping: true }));
   });
 
+  test('httpPost can preserve an explicit non-POST method', async () => {
+    const fetchImpl = vi.fn(async () => {
+      return new Response('', { status: 200 });
+    });
+
+    await httpPost('https://plex.tv/api/resources/1', {
+      fetchImpl,
+      method: 'PUT',
+      resolveHost: resolveTo(PUBLIC_ADDRESS),
+    });
+    const [, init] = fetchImpl.mock.calls[0];
+
+    expect(init.method).toBe('PUT');
+  });
+
   test('timeout aborts the request', async () => {
     const fetchImpl = vi.fn(async (_url, init) => {
       return new Promise((_resolve, reject) => {

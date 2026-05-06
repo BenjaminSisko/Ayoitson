@@ -29,7 +29,7 @@ async function httpGet(url, opts = {}) {
 }
 
 async function httpPost(url, opts = {}) {
-  return httpRequest('POST', url, opts);
+  return httpRequest(opts.method || 'POST', url, opts);
 }
 
 async function httpRequest(method, url, opts = {}) {
