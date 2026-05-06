@@ -1,4 +1,4 @@
-module.exports = function ($scope, dizquetv) {
+module.exports = function ($scope, ayoitson) {
     $scope.channels = []
     $scope.showChannelConfig = false
     $scope.selectedChannel = null
@@ -6,7 +6,7 @@ module.exports = function ($scope, dizquetv) {
 
     $scope.refreshChannels = async () => {
         $scope.channels = [ { number: 1, pending: true} ]
-        let channelNumbers = await dizquetv.getChannelNumbers();
+        let channelNumbers = await ayoitson.getChannelNumbers();
         $scope.channels = channelNumbers.map( (x) => {
             return {
                 number: x,
@@ -25,7 +25,7 @@ module.exports = function ($scope, dizquetv) {
     }
 
     $scope.queryChannel = async (index, channel) => {
-        let ch = await dizquetv.getChannelDescription(channel.number);
+        let ch = await ayoitson.getChannelDescription(channel.number);
         ch.pending = false;
         $scope.channels[index] = ch;
         $scope.$apply();
@@ -34,7 +34,7 @@ module.exports = function ($scope, dizquetv) {
     $scope.removeChannel = async ($index, channel) => {
         if (confirm("Are you sure to delete channel: " + channel.name + "?")) {
             $scope.channels[$index].pending = true;
-            await dizquetv.removeChannel(channel);
+            await ayoitson.removeChannel(channel);
             $scope.refreshChannels();
         }
     }
@@ -44,7 +44,7 @@ module.exports = function ($scope, dizquetv) {
         }
         if (typeof channel !== 'undefined') {
             if ($scope.selectedChannelIndex == -1) { // add new channel
-                await dizquetv.addChannel(channel);
+                await ayoitson.addChannel(channel);
                 $scope.showChannelConfig = false
                 $scope.refreshChannels();
             
@@ -54,14 +54,14 @@ module.exports = function ($scope, dizquetv) {
             ) {
                 //update + change channel number.
                 $scope.channels[ $scope.selectedChannelIndex ].pending = true;
-                await dizquetv.updateChannel(channel),
-                await dizquetv.removeChannel( { number: $scope.originalChannelNumber } )
+                await ayoitson.updateChannel(channel),
+                await ayoitson.removeChannel( { number: $scope.originalChannelNumber } )
                 $scope.showChannelConfig = false
                 $scope.$apply();
                 $scope.refreshChannels();
             } else { // update existing channel
                 $scope.channels[ $scope.selectedChannelIndex ].pending = true;
-                await dizquetv.updateChannel(channel);
+                await ayoitson.updateChannel(channel);
                 $scope.showChannelConfig = false
                 $scope.$apply();
                 $scope.refreshChannels();
@@ -81,8 +81,8 @@ module.exports = function ($scope, dizquetv) {
         } else {
             $scope.channels[index].pending = true;
             let p = await Promise.all([
-                dizquetv.getChannelProgramless($scope.channels[index].number),
-                dizquetv.getChannelPrograms($scope.channels[index].number),
+                ayoitson.getChannelProgramless($scope.channels[index].number),
+                ayoitson.getChannelPrograms($scope.channels[index].number),
             ]);
             let ch = p[0];
             ch.programs = p[1];

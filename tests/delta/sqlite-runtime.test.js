@@ -5,7 +5,7 @@ const { createRuntimeDatabase } = require('../../src/storage/sqlite-runtime');
 
 const FIXTURE_ROOT = path.resolve(
   __dirname,
-  '../fixtures/dizquetv-baseline/.dizquetv'
+  '../fixtures/legacy-diskdb-baseline/.dizquetv'
 );
 
 function createTempRuntime(options = {}) {

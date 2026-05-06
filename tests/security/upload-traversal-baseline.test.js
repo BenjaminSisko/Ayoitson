@@ -20,19 +20,26 @@ function multipartBody(boundary, filename) {
 
 describe('Phase 1 image upload path traversal baseline', () => {
   let tempRoot;
+  let previousAyoitsonDatabase;
   let previousDatabase;
 
   beforeEach(() => {
+    previousAyoitsonDatabase = process.env.AYOITSON_DATABASE;
     previousDatabase = process.env.DATABASE;
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ayoitson-upload-'));
-    process.env.DATABASE = path.join(tempRoot, 'db');
-    fs.mkdirSync(path.join(process.env.DATABASE, 'images', 'uploads'), {
-      recursive: true,
-    });
+    delete process.env.DATABASE;
+    process.env.AYOITSON_DATABASE = path.join(tempRoot, 'db');
+    fs.mkdirSync(
+      path.join(process.env.AYOITSON_DATABASE, 'images', 'uploads'),
+      {
+        recursive: true,
+      }
+    );
   });
 
   afterEach(() => {
-    process.env.DATABASE = previousDatabase;
+    restoreEnv('AYOITSON_DATABASE', previousAyoitsonDatabase);
+    restoreEnv('DATABASE', previousDatabase);
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 
@@ -51,7 +58,9 @@ describe('Phase 1 image upload path traversal baseline', () => {
 
       expect(response.status).toBe(400);
       expect(
-        fs.readdirSync(path.join(process.env.DATABASE, 'images', 'uploads'))
+        fs.readdirSync(
+          path.join(process.env.AYOITSON_DATABASE, 'images', 'uploads')
+        )
       ).toEqual([]);
     }
   );
@@ -96,7 +105,7 @@ describe('Phase 1 image upload path traversal baseline', () => {
     expect(
       fs.existsSync(
         path.join(
-          process.env.DATABASE,
+          process.env.AYOITSON_DATABASE,
           'images',
           'uploads',
           response.body.data.name
@@ -105,8 +114,21 @@ describe('Phase 1 image upload path traversal baseline', () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(process.env.DATABASE, 'images', 'uploads', 'logo.png')
+        path.join(
+          process.env.AYOITSON_DATABASE,
+          'images',
+          'uploads',
+          'logo.png'
+        )
       )
     ).toBe(false);
   });
 });
+
+function restoreEnv(name, value) {
+  if (typeof value === 'undefined') {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
+}

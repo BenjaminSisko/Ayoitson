@@ -1,4 +1,4 @@
-module.exports = function ($timeout, dizquetv) {
+module.exports = function ($timeout, ayoitson) {
     return {
         restrict: 'E',
         templateUrl: 'templates/channel-redirect.html',
@@ -25,10 +25,10 @@ module.exports = function ($timeout, dizquetv) {
             })
 
             scope.refreshChannels = async() => {
-                let channelNumbers = await dizquetv.getChannelNumbers();
+                let channelNumbers = await ayoitson.getChannelNumbers();
                 try {
                     await Promise.all( channelNumbers.map( async(x) => {
-                        let desc = await dizquetv.getChannelDescription(x);
+                        let desc = await ayoitson.getChannelDescription(x);
                         let option = {
                             id: x,
                             description: `${x} - ${desc.name}`,

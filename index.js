@@ -58,7 +58,7 @@ const onShutdown = require("node-graceful-shutdown").onShutdown;
 
 console.log(
 `         \\
-   dizqueTV ${constants.VERSION_NAME}
+   ${constants.APP_NAME} ${constants.VERSION_NAME}
 .------------.
 |:::///### o |
 |:::///###   |
@@ -69,45 +69,49 @@ console.log(
 const NODE = parseInt( process.version.match(/^[^0-9]*(\d+)\..*$/)[1] );
 
 if (NODE < 12) {
-    console.error(`WARNING: Your nodejs version ${process.version} is lower than supported. dizqueTV has been tested best on nodejs 12.16.`);
+    console.error(`WARNING: Your nodejs version ${process.version} is lower than supported. ${constants.APP_NAME} has been tested best on nodejs 12.16.`);
 }
 
 let unlockPath = false;
+let cliDatabaseDir;
 for (let i = 0, l = process.argv.length; i < l; i++) {
     if ((process.argv[i] === "-p" || process.argv[i] === "--port") && i + 1 !== l)
         process.env.PORT = process.argv[i + 1]
     if ((process.argv[i] === "-d" || process.argv[i] === "--database") && i + 1 !== l)
-        process.env.DATABASE = process.argv[i + 1]
+        cliDatabaseDir = process.argv[i + 1]
 
     if (process.argv[i] === "--unlock") {
         unlockPath = true;
     }
 }
 
-const requestedDatabaseDir = process.env.DATABASE;
+const deprecatedDatabaseDir = process.env.DATABASE;
+if (deprecatedDatabaseDir && !process.env.AYOITSON_DATABASE && !cliDatabaseDir) {
+    console.warn('WARNING: DATABASE is deprecated; use AYOITSON_DATABASE. DATABASE will be removed after one compatibility release.');
+}
 const runtimeDirs = resolveRuntimeDataDirs({
     databaseDir:
+        cliDatabaseDir ||
         process.env.AYOITSON_DATABASE ||
-        requestedDatabaseDir ||
+        deprecatedDatabaseDir ||
         path.join(".", ".ayoitson"),
     legacyDir:
-        process.env.DIZQUETV_LEGACY_DATABASE ||
-        (requestedDatabaseDir ? undefined : path.join(".", ".dizquetv")),
+        process.env.AYOITSON_LEGACY_DATABASE ||
+        (cliDatabaseDir || deprecatedDatabaseDir ? undefined : path.join(".", ".dizquetv")),
 });
+process.env.AYOITSON_DATABASE = runtimeDirs.databaseDir;
 process.env.DATABASE = runtimeDirs.databaseDir;
 process.env.PORT = process.env.PORT || 8000
+const databaseDir = process.env.AYOITSON_DATABASE;
 
-if (!fs.existsSync(process.env.DATABASE)) {
-    if (fs.existsSync(  path.join(".", ".pseudotv")  )) {
-        throw Error(process.env.DATABASE + " folder not found but ./.pseudotv has been found. Please rename this folder or create an empty " + process.env.DATABASE + " folder so that the program is not confused about.");
-    }
-    fs.mkdirSync(process.env.DATABASE)
+if (!fs.existsSync(databaseDir)) {
+    fs.mkdirSync(databaseDir)
 }
 
 let fontAwesome = "fontawesome-free-5.15.4-web";
 let bootstrap = "bootstrap-4.4.1-dist";
 let db = createRuntimeDatabase({
-    databaseDir: process.env.DATABASE,
+    databaseDir,
     legacyDir: runtimeDirs.legacyDir,
     archiveLegacy: process.env.AYOITSON_ARCHIVE_LEGACY === '1',
 });
@@ -117,7 +121,7 @@ channelDB = new ChannelDAO( db.sqlite );
 // "if (!exists) read+write" pattern 8 times — closes BUG-TODO-REPETITIVE at
 // the original index.js:308 site.
 seedRuntimeAssets({
-    databaseDir: process.env.DATABASE,
+    databaseDir,
     resourcesDir: path.join(__dirname, 'resources'),
     bundles: [fontAwesome, bootstrap],
 });
@@ -141,7 +145,7 @@ async function initializeProgramPlayTimeDB() {
 }
 initializeProgramPlayTimeDB();
 
-fileCache = new FileCacheService( path.join(process.env.DATABASE, 'cache') );
+fileCache = new FileCacheService( path.join(databaseDir, 'cache') );
 cacheImageService = new CacheImageService(db, fileCache);
 m3uService = new M3uService(fileCache, channelService)
 
@@ -315,7 +319,7 @@ app.use(createStreamLimiter())
 
 // API key store reuses the runtime SQLite database so api_keys live in
 // the same file as the rest of the operator's data.
-const apiKeyDb = openAyoitsonDatabase({ databaseDir: process.env.DATABASE })
+const apiKeyDb = openAyoitsonDatabase({ databaseDir })
 const requireApiKey = createAuthMiddleware(apiKeyDb)
 const authFailureLimiter = createAuthFailureLimiter()
 
@@ -351,15 +355,15 @@ app.get('/version.js', (req, res) => {
     ` );
     res.end();
 });
-app.use('/images', express.static(path.join(process.env.DATABASE, 'images')))
+app.use('/images', express.static(path.join(databaseDir, 'images')))
 app.use(express.static(path.join(__dirname, 'web','public')))
-app.use('/images', express.static(path.join(process.env.DATABASE, 'images')))
+app.use('/images', express.static(path.join(databaseDir, 'images')))
 app.use('/cache/images', cacheImageService.routerInterceptor())
-app.use('/cache/images', express.static(path.join(process.env.DATABASE, 'cache','images')))
+app.use('/cache/images', express.static(path.join(databaseDir, 'cache','images')))
 app.use('/favicon.svg', express.static(
     path.join(__dirname, 'resources','favicon.svg')
 ) );
-app.use('/custom.css', express.static(path.join(process.env.DATABASE, 'custom.css')))
+app.use('/custom.css', express.static(path.join(databaseDir, 'custom.css')))
 
 // API Routers — Phase 4 redesign (Lane Alpha). Per-resource routers under
 // `src/api/*` are composed by `src/api/index.js`; auth is mounted *per-router*
@@ -388,8 +392,8 @@ app.use(
     )
 )
 app.use('/api/cache/images', cacheImageService.apiRouters())
-app.use('/' + fontAwesome, express.static(path.join(process.env.DATABASE, fontAwesome)))
-app.use('/' + bootstrap, express.static(path.join(process.env.DATABASE, bootstrap)))
+app.use('/' + fontAwesome, express.static(path.join(databaseDir, fontAwesome)))
+app.use('/' + bootstrap, express.static(path.join(databaseDir, bootstrap)))
 
 app.use(video.router( channelService, fillerDB, db, programmingService, activeChannelService, programPlayTimeDB  ))
 app.use(hdhr.router)

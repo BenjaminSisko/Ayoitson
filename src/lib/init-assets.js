@@ -70,7 +70,7 @@ function seedRuntimeAssets({ databaseDir, resourcesDir, bundles }) {
   ]);
 
   const seedFiles = [
-    ['dizquetv.png', 'images/dizquetv.png'],
+    ['ayoitson.png', 'images/ayoitson.png'],
     ['font.ttf', 'font.ttf'],
     ['generic-error-screen.png', 'images/generic-error-screen.png'],
     ['generic-offline-screen.png', 'images/generic-offline-screen.png'],

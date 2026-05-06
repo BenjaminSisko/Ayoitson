@@ -1,4 +1,4 @@
-module.exports = function ($scope, dizquetv, $timeout) {
+module.exports = function ($scope, ayoitson, $timeout) {
 
     $scope.loading = true;
     $scope.channelOptions = [
@@ -45,10 +45,10 @@ module.exports = function ($scope, dizquetv, $timeout) {
     }
 
     let loadChannels = async() => {
-        let channelNumbers = await dizquetv.getChannelNumbers();
+        let channelNumbers = await ayoitson.getChannelNumbers();
         try {
             await Promise.all( channelNumbers.map( async(x) => {
-                let desc = await dizquetv.getChannelDescription(x);
+                let desc = await ayoitson.getChannelDescription(x);
                 let option = {
                     id: x,
                     description: `${x} - ${desc.name}`,

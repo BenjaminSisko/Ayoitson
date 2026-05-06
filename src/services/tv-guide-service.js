@@ -1,9 +1,9 @@
 const events = require('events');
 const constants = require('../constants');
-const FALLBACK_ICON =
-  'https://raw.githubusercontent.com/vexorain/dizquetv/main/resources/dizquetv.png';
 const throttle = require('./throttle');
 const { resolveXmltvPath } = require('../api/_helpers');
+const { getInternalBaseUrl } = require('../lib/url');
+const FALLBACK_ICON = `${getInternalBaseUrl()}/images/ayoitson.png`;
 
 class TVGuideService extends events.EventEmitter {
   /****
@@ -419,7 +419,7 @@ class TVGuideService extends events.EventEmitter {
     let result = {};
     if (channels.length == 0) {
       let channel = {
-        name: 'dizqueTV',
+        name: 'Ayoitson',
         icon: FALLBACK_ICON,
       };
       result[1] = {

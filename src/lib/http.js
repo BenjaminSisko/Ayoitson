@@ -261,8 +261,10 @@ function buildAllowlist(opts = {}) {
   return entries.filter(Boolean);
 }
 
-function readConfiguredPlexServerUris(databaseDir = process.env.DATABASE) {
-  const baseDir = databaseDir || path.join(process.cwd(), '.dizquetv');
+function readConfiguredPlexServerUris(
+  databaseDir = process.env.AYOITSON_DATABASE || process.env.DATABASE
+) {
+  const baseDir = databaseDir || path.join(process.cwd(), '.ayoitson');
   const serverPath = path.join(baseDir, 'plex-servers.json');
 
   if (!fs.existsSync(serverPath)) {

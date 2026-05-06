@@ -1,4 +1,4 @@
-module.exports = function ($scope, $timeout, dizquetv) {
+module.exports = function ($scope, $timeout, ayoitson) {
     $scope.fillers = []
     $scope.showFillerConfig = false
     $scope.selectedFiller = null
@@ -7,7 +7,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
     $scope.refreshFiller = async () => {
         $scope.fillers = [ { id: '?', pending: true} ]
         $timeout();
-        let fillers = await dizquetv.getAllFillersInfo();
+        let fillers = await ayoitson.getAllFillersInfo();
         fillers.sort( (a,b) => {
             return a.name > b.name;
         } );
@@ -28,7 +28,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
     }
 
     $scope.queryChannel = async (index, channel) => {
-        let ch = await dizquetv.getChannelDescription(channel.number);
+        let ch = await ayoitson.getChannelDescription(channel.number);
         ch.pending = false;
         $scope.fillers[index] = ch;
         $scope.$apply();
@@ -41,10 +41,10 @@ module.exports = function ($scope, $timeout, dizquetv) {
         if (typeof filler !== 'undefined') {
             // not canceled
             if ($scope.selectedChannelIndex == -1) { // add new channel
-                await dizquetv.createFiller(filler);
+                await ayoitson.createFiller(filler);
             } else {
                 $scope.fillers[ $scope.selectedChannelIndex ].pending = true;
-                await dizquetv.updateFiller(filler.id, filler);
+                await ayoitson.updateFiller(filler.id, filler);
             }
             await $scope.refreshFiller();
         }
@@ -59,7 +59,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
                 feedToFillerConfig();
             } else {
                 $scope.fillers[index].pending = true;
-                let f = await dizquetv.getFiller($scope.fillers[index].id);
+                let f = await ayoitson.getFiller($scope.fillers[index].id);
                 feedToFillerConfig(f);
                 $timeout();
             }
@@ -76,7 +76,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
             $scope.deleteFillerIndex = index;
             $scope.fillers[index].pending = true;
             let id = $scope.fillers[index].id;
-            let channels = await dizquetv.getChannelsUsingFiller(id);
+            let channels = await ayoitson.getChannelsUsingFiller(id);
             feedToDeleteFiller( {
                 id: id,
                 name: $scope.fillers[index].name,
@@ -96,7 +96,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
             $timeout();
             if (typeof(id) !== 'undefined') {
                 $scope.fillers[ $scope.deleteFillerIndex ].pending = true;
-                await dizquetv.deleteFiller(id);
+                await ayoitson.deleteFiller(id);
                 $timeout();
                 await $scope.refreshFiller();
                 $timeout();

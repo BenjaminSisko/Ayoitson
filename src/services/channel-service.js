@@ -83,7 +83,7 @@ function cleanUpProgram(program) {
 
 function cleanUpChannel(channel) {
   if (typeof channel.groupTitle === 'undefined' || channel.groupTitle === '') {
-    channel.groupTitle = 'dizqueTV';
+    channel.groupTitle = 'Ayoitson';
   }
   channel.programs = channel.programs.flatMap(cleanUpProgram);
   delete channel.fillerContent;

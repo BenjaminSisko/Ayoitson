@@ -37,7 +37,10 @@ function resolveDatabasePath(options = {}) {
   }
 
   const databaseDir =
-    options.databaseDir || process.env.AYOITSON_DATABASE || DEFAULT_DATA_DIR;
+    options.databaseDir ||
+    process.env.AYOITSON_DATABASE ||
+    process.env.DATABASE ||
+    DEFAULT_DATA_DIR;
   return path.join(databaseDir, DEFAULT_DB_FILE);
 }
 

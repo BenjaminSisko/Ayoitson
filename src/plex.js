@@ -1,4 +1,5 @@
 const { httpGet, httpPost } = require('./lib/http');
+const constants = require('./constants');
 const {
   readOrCreatePlexClientIdentifier,
 } = require('./lib/plex-client-identifier');
@@ -53,9 +54,9 @@ class Plex {
     });
     this._headers = {
       Accept: 'application/json',
-      'X-Plex-Device': 'dizqueTV',
-      'X-Plex-Device-Name': 'dizqueTV',
-      'X-Plex-Product': 'dizqueTV',
+      'X-Plex-Device': constants.APP_NAME,
+      'X-Plex-Device-Name': constants.APP_NAME,
+      'X-Plex-Product': constants.APP_NAME,
       'X-Plex-Version': '0.1',
       'X-Plex-Client-Identifier': this._clientIdentifier,
       'X-Plex-Platform': 'Chrome',

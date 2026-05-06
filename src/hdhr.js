@@ -1,5 +1,6 @@
 const express = require('express')
 const SSDP = require('node-ssdp').Server
+const constants = require('./constants')
 
 module.exports = hdhr
 
@@ -53,7 +54,7 @@ function hdhr(db, channelDB) {
           }
         }
         if (lineup.length === 0)
-            lineup.push({ GuideNumber: '1', GuideName: 'dizqueTV', URL: `${req.protocol}://${req.get('host')}/setup` })
+            lineup.push({ GuideNumber: '1', GuideName: constants.APP_NAME, URL: `${req.protocol}://${req.get('host')}/setup` })
         res.send(JSON.stringify(lineup))
     })
 
@@ -63,14 +64,14 @@ function hdhr(db, channelDB) {
 function getDevice(db, host) {
     let hdhrSettings = db['hdhr-settings'].find()[0]
     var device = {
-        FriendlyName: "dizqueTV",
-        Manufacturer: "dizqueTV - Silicondust",
-        ManufacturerURL: "https://github.com/vexorian/dizquetv",
+        FriendlyName: constants.APP_NAME,
+        Manufacturer: "Silicondust",
+        ManufacturerURL: constants.APP_REPOSITORY_URL,
         ModelNumber: "HDTC-2US",
         FirmwareName: "hdhomeruntc_atsc",
         TunerCount: hdhrSettings.tunerCount,
         FirmwareVersion: "20170930",
-        DeviceID: 'dizqueTV',
+        DeviceID: constants.APP_NAME,
         DeviceAuth: "",
         BaseURL: `${host}`,
         LineupURL: `${host}/lineup.json`
@@ -85,7 +86,7 @@ function getDevice(db, host) {
       </specVersion>
       <device>
       <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-      <friendlyName>dizqueTV</friendlyName>
+      <friendlyName>${constants.APP_NAME}</friendlyName>
       <manufacturer>Silicondust</manufacturer>
       <modelName>HDTC-2US</modelName>
       <modelNumber>HDTC-2US</modelNumber>

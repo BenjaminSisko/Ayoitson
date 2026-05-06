@@ -6,6 +6,10 @@ const {
   escapeDrawtextLiteral,
 } = require('./lib/ffmpeg-escape');
 
+function getDatabaseDir() {
+  return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
+
 class FFMPEG_TEXT extends events.EventEmitter {
   constructor(opts, title, subtitle) {
     super();
@@ -28,7 +32,7 @@ class FFMPEG_TEXT extends events.EventEmitter {
       '-i',
       'anullsrc',
       '-vf',
-      `drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=30:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:textfile='${escapeDrawtextLiteral(this.drawtextFiles[0])}',drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=20:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+20)/2:textfile='${escapeDrawtextLiteral(this.drawtextFiles[1])}'`,
+      `drawtext=fontfile=${getDatabaseDir()}/font.ttf:fontsize=30:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:textfile='${escapeDrawtextLiteral(this.drawtextFiles[0])}',drawtext=fontfile=${getDatabaseDir()}/font.ttf:fontsize=20:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+20)/2:textfile='${escapeDrawtextLiteral(this.drawtextFiles[1])}'`,
       '-c:v',
       opts.videoEncoder,
       '-c:a',

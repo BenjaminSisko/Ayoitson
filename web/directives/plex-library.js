@@ -1,4 +1,4 @@
-module.exports = function (plex, dizquetv, $timeout, commonProgramTools) {
+module.exports = function (plex, ayoitson, $timeout, commonProgramTools) {
     return {
         restrict: 'E',
         templateUrl: 'templates/plex-library.html',
@@ -89,7 +89,7 @@ module.exports = function (plex, dizquetv, $timeout, commonProgramTools) {
               }
             }
 
-            dizquetv.getPlexServers().then((servers) => {
+            ayoitson.getPlexServers().then((servers) => {
                 if (servers.length === 0) {
                     scope.noServers = true
                     return
@@ -104,8 +104,8 @@ module.exports = function (plex, dizquetv, $timeout, commonProgramTools) {
                 scope.currentOrigin = scope.origins[0];
                 scope.plexServer = scope.currentOrigin.server;
                 scope.origins.push( {
-                    "type": "dizquetv",
-                    "name" : "dizqueTV - Custom Shows",
+                    "type": "ayoitson",
+                    "name" : "Ayoitson - Custom Shows",
                 } );
                 updateLibrary(scope.plexServer)
             })
@@ -209,7 +209,7 @@ module.exports = function (plex, dizquetv, $timeout, commonProgramTools) {
             scope.addCustomShow = async(show) => {
                 scope.pending++;
                 try {
-                    show = await dizquetv.getShow(show.id);
+                    show = await ayoitson.getShow(show.id);
                     for (let i = 0; i < show.content.length; i++) {
                         let item = JSON.parse(angular.toJson( show.content[i] ));
                         item.customShowId = show.id;
@@ -229,7 +229,7 @@ module.exports = function (plex, dizquetv, $timeout, commonProgramTools) {
             }
 
             let updateCustomShows = async() => {
-                scope.customShows = await dizquetv.getAllShowsInfo();
+                scope.customShows = await ayoitson.getAllShowsInfo();
                 scope.$apply();
             }
 

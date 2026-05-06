@@ -1,13 +1,35 @@
 const Plex = require('../../src/plex');
 
 module.exports = function ($http, $window, $interval) {
+    function getOAuthClientIdentifier() {
+        const key = 'ayoitsonOAuthClientIdentifier';
+        try {
+            let stored = $window.localStorage && $window.localStorage.getItem(key);
+            if (stored) {
+                return stored;
+            }
+            const id = (
+                $window.crypto && $window.crypto.randomUUID
+                    ? $window.crypto.randomUUID()
+                    : `ayoitson-${Date.now()}-${Math.random().toString(16).slice(2)}`
+            );
+            if ($window.localStorage) {
+                $window.localStorage.setItem(key, id);
+            }
+            return id;
+        } catch (err) {
+            return `ayoitson-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+    }
+
     let exported = {
         login: async () => {
+            const clientIdentifier = getOAuthClientIdentifier();
             const headers = {
                 'Accept': 'application/json',
-                'X-Plex-Product': 'dizqueTV',
+                'X-Plex-Product': 'Ayoitson',
                 'X-Plex-Version': 'Plex OAuth',
-                'X-Plex-Client-Identifier': 'rg14zekk3pa5zp4safjwaa8z',
+                'X-Plex-Client-Identifier': clientIdentifier,
                 'X-Plex-Model': 'Plex OAuth'
             }
 
@@ -28,7 +50,7 @@ module.exports = function ($http, $window, $interval) {
                     }
 
                     const authModal = $window.open(
-                        `https://app.plex.tv/auth/#!?clientID=rg14zekk3pa5zp4safjwaa8z&context[device][version]=Plex OAuth&context[device][model]=Plex OAuth&code=${res.data.code}&context[device][product]=Plex Web`, 
+                        `https://app.plex.tv/auth/#!?clientID=${encodeURIComponent(clientIdentifier)}&context[device][version]=Plex OAuth&context[device][model]=Plex OAuth&code=${res.data.code}&context[device][product]=Ayoitson`,
                         "_blank", 
                         `height=${plexWindowSizes.height}, width=${plexWindowSizes.width}, top=${plexWindowPosition.height}, left=${plexWindowPosition.width}`
                     );

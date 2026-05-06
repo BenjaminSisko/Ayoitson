@@ -1,4 +1,4 @@
-module.exports = function ($timeout, $location, dizquetv, resolutionOptions, getShowData, commonProgramTools) {
+module.exports = function ($timeout, $location, ayoitson, resolutionOptions, getShowData, commonProgramTools) {
     return {
         restrict: 'E',
         templateUrl: 'templates/channel-config.html',
@@ -60,8 +60,8 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
                 scope.channel.fallback = [];
                 scope.channel.guideMinimumDurationSeconds = 5 * 60;
                 scope.isNewChannel = true
-                scope.channel.icon = `${$location.protocol()}://${location.host}/images/dizquetv.png`
-                scope.channel.groupTitle = "dizqueTV";
+                scope.channel.icon = `${$location.protocol()}://${location.host}/images/ayoitson.png`
+                scope.channel.groupTitle = "Ayoitson";
                 scope.channel.disableFillerOverlay = true;
                 scope.channel.iconWidth = 120
                 scope.channel.iconDuration = 60
@@ -106,7 +106,7 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
                     ||
                     (scope.channel.groupTitle === '')
                 ) {
-                    scope.channel.groupTitle = "dizqueTV";
+                    scope.channel.groupTitle = "Ayoitson";
                 }
 
                 if (typeof(scope.channel.fillerRepeatCooldown) === 'undefined') {
@@ -1170,10 +1170,10 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
                 { id: -1, description: "# Channel #"},
             ]
             scope.loadChannels = async () => {
-                let channelNumbers = await dizquetv.getChannelNumbers();
+                let channelNumbers = await ayoitson.getChannelNumbers();
                 try {
                     await Promise.all( channelNumbers.map( async(x) => {
-                        let desc = await dizquetv.getChannelDescription(x);
+                        let desc = await ayoitson.getChannelDescription(x);
                         if (desc.number != scope.channel.number) {
                             scope.knownChannels.push( {
                                 id: desc.number,
@@ -1461,7 +1461,7 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
             let refreshFillerOptions = async() => {
 
                 try {
-                    let r = await dizquetv.getAllFillersInfo();
+                    let r = await ayoitson.getAllFillersInfo();
                     scope.fillerOptions = r.map( (f) => {
                         return {
                             id: f.id,
@@ -1502,7 +1502,7 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
 
                
                 try {
-                    let ffmpegSettings = await dizquetv.getFfmpegSettings()
+                    let ffmpegSettings = await ayoitson.getFfmpegSettings()
                     if (
                         (ffmpegSettings.targetResolution != null)
                         && (typeof(ffmpegSettings.targetResolution) !== 'undefined')
@@ -1783,7 +1783,7 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
             scope.logoOnChange = (event) => {
                 const formData = new FormData();
                 formData.append('image', event.target.files[0]);
-                dizquetv.uploadImage(formData).then((response) => {
+                ayoitson.uploadImage(formData).then((response) => {
                     scope.channel.icon = response.data.fileUrl;
                 })
             }
@@ -1791,7 +1791,7 @@ module.exports = function ($timeout, $location, dizquetv, resolutionOptions, get
             scope.watermarkOnChange = (event) => {
                 const formData = new FormData();
                 formData.append('image', event.target.files[0]);
-                dizquetv.uploadImage(formData).then((response) => {
+                ayoitson.uploadImage(formData).then((response) => {
                     scope.channel.watermark.url = response.data.fileUrl;
                 })
             }

@@ -20,6 +20,7 @@
 const path = require('path');
 var fs = require('fs');
 const { getInternalBaseUrl } = require('./lib/url');
+const { createClientIdentifier } = require('./lib/client-identifier');
 
 const TARGET_VERSION = 805;
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -52,10 +53,14 @@ const STEPS = [
 
 const { v4: uuidv4 } = require('uuid');
 
+function getDatabaseDir() {
+    return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
+
 function createDeviceId(db) {
     let deviceId = db['client-id'].find();
     if (deviceId.length == 0) {
-        let clientId = uuidv4().replace(/-/g,"").slice(0,16) + "-org-dizquetv-" + process.platform
+        let clientId = createClientIdentifier()
         let dev = {
             clientId: clientId,
         }
@@ -112,7 +117,7 @@ function basicDB(db) {
         db['xmltv-settings'].save({
             cache: 12,
             refresh: 4,
-            file: `${process.env.DATABASE}/xmltv.xml`
+            file: `${getDatabaseDir()}/xmltv.xml`
         })
     }
     let hdhrSettings = db['hdhr-settings'].find()
@@ -232,7 +237,7 @@ function initDB(db, channelDB, dir ) {
                     console.log("Done migrating db to version : " + dbVersion.version);
 
                 } catch (e) {
-                    console.log("Error during migration. Sorry, we can't continue. Wiping out your .dizquetv folder might be a workaround, but that means you lose all your settings.", e);
+                    console.log("Error during migration. Sorry, we can't continue. Wiping out your .ayoitson folder might be a workaround, but that means you lose all your settings.", e);
                     throw Error("Migration error, step=" + dbVersion.version);
                 }
             }
@@ -482,15 +487,15 @@ function fixCorruptedServer(db) {
     }
     if (badFound) {
         console.log("Fixing the plex-server.json...");
-        let f = path.join(process.env.DATABASE, `plex-servers.json` );
+        let f = path.join(getDatabaseDir(), `plex-servers.json` );
         fs.writeFileSync( f, JSON.stringify(servers) );
     }
 }
 
 function extractFillersFromChannels() {
     console.log("Extracting fillers from channels...");
-    let channels = path.join(process.env.DATABASE, 'channels');
-    let fillers = path.join(process.env.DATABASE, 'filler');
+    let channels = path.join(getDatabaseDir(), 'channels');
+    let fillers = path.join(getDatabaseDir(), 'filler');
     let channelFiles = fs.readdirSync(channels);
     let usedNames = {};
 
@@ -546,7 +551,7 @@ function extractFillersFromChannels() {
 
 function addFPS(db) {
     let ffmpegSettings = db['ffmpeg-settings'].find()[0];
-    let f = path.join(process.env.DATABASE, 'ffmpeg-settings.json');
+    let f = path.join(getDatabaseDir(), 'ffmpeg-settings.json');
     ffmpegSettings.maxFPS = 60;
     fs.writeFileSync( f, JSON.stringify( [ffmpegSettings] ) );
 }
@@ -611,7 +616,7 @@ function migrateWatermark(db, channelDB) {
     }
 
     console.log("Migrating watermarks...");
-    let channels = path.join(process.env.DATABASE, 'channels');
+    let channels = path.join(getDatabaseDir(), 'channels');
     let channelFiles = fs.readdirSync(channels);
     for (let i = 0; i < channelFiles.length; i++) {
         if (path.extname( channelFiles[i] ) === '.json') {
@@ -627,17 +632,17 @@ function migrateWatermark(db, channelDB) {
 
 function addScalingAlgorithm(db) {
     let ffmpegSettings = db['ffmpeg-settings'].find()[0];
-    let f = path.join(process.env.DATABASE, 'ffmpeg-settings.json');
+    let f = path.join(getDatabaseDir(), 'ffmpeg-settings.json');
     ffmpegSettings.scalingAlgorithm = "bicubic";
     fs.writeFileSync( f, JSON.stringify( [ffmpegSettings] ) );
 }
 
 function addFFMpegLock(db) {
     let ffmpegSettings = db['ffmpeg-settings'].find()[0];
-    let f = path.join(process.env.DATABASE, 'ffmpeg-settings.json');
+    let f = path.join(getDatabaseDir(), 'ffmpeg-settings.json');
     if ( typeof(ffmpegSettings.ffmpegPathLockDate) === 'undefined' || ffmpegSettings.ffmpegPathLockDate == null ) {
 
-        console.log("Adding ffmpeg lock. For your security it will not be possible to modify the ffmpeg path using the UI anymore unless you launch dizquetv by following special instructions..");
+        console.log("Adding ffmpeg lock. For your security it will not be possible to modify the ffmpeg path using the UI anymore unless you launch Ayoitson by following special instructions..");
         // We are migrating an existing db that had a ffmpeg path. Make sure
         // it's already locked.
         ffmpegSettings.ffmpegPathLockDate = new Date().getTime() - 2 * DAY_MS;
@@ -646,49 +651,43 @@ function addFFMpegLock(db) {
 }
 
 function moveBackup(path) {
-    if (fs.existsSync(`${process.env.DATABASE}${path}`) ) {
+    if (fs.existsSync(`${getDatabaseDir()}${path}`) ) {
         let i = 0;
-        while (fs.existsSync( `${process.env.DATABASE}${path}.bak.${i}`)   ) {
+        while (fs.existsSync( `${getDatabaseDir()}${path}.bak.${i}`)   ) {
             i++;
         }
-        fs.renameSync(`${process.env.DATABASE}${path}`, `${process.env.DATABASE}${path}.bak.${i}` );
+        fs.renameSync(`${getDatabaseDir()}${path}`, `${getDatabaseDir()}${path}.bak.${i}` );
     }
 }
 
 function reAddIcon(dir) {
-    moveBackup('/images/dizquetv.png');
-    let data = fs.readFileSync(path.resolve(path.join(dir, 'resources/dizquetv.png')));
-    fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data);
-
-    if (fs.existsSync(`${process.env.DATABASE}/images/pseudotv.png`) ) {
-        moveBackup('/images/pseudotv.png');
-        let data = fs.readFileSync(path.resolve(path.join(dir, 'resources/dizquetv.png')));
-        fs.writeFileSync(process.env.DATABASE + '/images/pseudotv.png', data);
-    }
+    moveBackup('/images/ayoitson.png');
+    let data = fs.readFileSync(path.resolve(path.join(dir, 'resources/ayoitson.png')));
+    fs.writeFileSync(getDatabaseDir() + '/images/ayoitson.png', data);
 
     moveBackup('/images/generic-error-screen.png');
     data = fs.readFileSync(path.resolve(path.join(dir, 'resources/generic-error-screen.png')))
-    fs.writeFileSync(process.env.DATABASE + '/images/generic-error-screen.png', data)
+    fs.writeFileSync(getDatabaseDir() + '/images/generic-error-screen.png', data)
 
     moveBackup('/images/generic-offline-screen.png');
     data = fs.readFileSync(path.resolve(path.join(dir, 'resources/generic-offline-screen.png')));
-    fs.writeFileSync(process.env.DATABASE + '/images/generic-offline-screen.png', data);
+    fs.writeFileSync(getDatabaseDir() + '/images/generic-offline-screen.png', data);
 
     moveBackup('/images/loading-screen.png');
     data = fs.readFileSync(path.resolve(path.join(dir, 'resources/loading-screen.png')))
-    fs.writeFileSync(process.env.DATABASE + '/images/loading-screen.png', data)
+    fs.writeFileSync(getDatabaseDir() + '/images/loading-screen.png', data)
 }
 
 function addDeinterlaceFilter(db) {
     let ffmpegSettings = db['ffmpeg-settings'].find()[0];
-    let f = path.join(process.env.DATABASE, 'ffmpeg-settings.json');
+    let f = path.join(getDatabaseDir(), 'ffmpeg-settings.json');
     ffmpegSettings.deinterlaceFilter = "none";
     fs.writeFileSync( f, JSON.stringify( [ffmpegSettings] ) );
 }
 
 function addImageCache(db) {
     let xmltvSettings = db['xmltv-settings'].find()[0];
-    let f = path.join(process.env.DATABASE, 'xmltv-settings.json');
+    let f = path.join(getDatabaseDir(), 'xmltv-settings.json');
     xmltvSettings.enableImageCache = false;
     fs.writeFileSync( f, JSON.stringify( [xmltvSettings] ) );
 }
@@ -696,12 +695,12 @@ function addImageCache(db) {
 function addGroupTitle() {
 
     function migrateChannel(channel) {
-        channel.groupTitle= "dizqueTV";
+        channel.groupTitle= "Ayoitson";
         return channel;
     }
 
     console.log("Adding group title to channels...");
-    let channels = path.join(process.env.DATABASE, 'channels');
+    let channels = path.join(getDatabaseDir(), 'channels');
     let channelFiles = fs.readdirSync(channels);
     for (let i = 0; i < channelFiles.length; i++) {
         if (path.extname( channelFiles[i] ) === '.json') {
@@ -741,7 +740,7 @@ function fixNonIntegerDurations() {
     }
 
     console.log("Checking channels to make sure they weren't corrupted by random slots bug #350...");
-    let channels = path.join(process.env.DATABASE, 'channels');
+    let channels = path.join(getDatabaseDir(), 'channels');
     let channelFiles = fs.readdirSync(channels);
     for (let i = 0; i < channelFiles.length; i++) {
         if (path.extname( channelFiles[i] ) === '.json') {

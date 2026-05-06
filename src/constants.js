@@ -1,4 +1,9 @@
 module.exports = {
+    APP_NAME: "Ayoitson",
+    APP_SLUG: "ayoitson",
+    APP_REPOSITORY_URL: "https://github.com/salmllc/ayoitson",
+    PLEX_CLIENT_IDENTIFIER_SUFFIX: "-org-ayoitson-",
+
     SLACK: 9999,
     TVGUIDE_MAXIMUM_PADDING_LENGTH_MS:    30*60*1000,
     DEFAULT_GUIDE_STEALTH_DURATION: 5 * 60* 1000,

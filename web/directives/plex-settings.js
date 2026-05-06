@@ -1,4 +1,4 @@
-module.exports = function (plex, dizquetv, $timeout) {
+module.exports = function (plex, ayoitson, $timeout) {
     return {
         restrict: 'E',
         templateUrl: 'templates/plex-settings.html',
@@ -15,7 +15,7 @@ module.exports = function (plex, dizquetv, $timeout) {
             scope.serverError = "";
             scope.refreshServerList = async () => {
                 scope.serversPending = true;
-                let servers = await dizquetv.getPlexServers();
+                let servers = await ayoitson.getPlexServers();
                 scope.serversPending = false;
                 scope.servers = servers;
                 if(servers) {
@@ -94,7 +94,7 @@ module.exports = function (plex, dizquetv, $timeout) {
             };
 
             scope.refreshBackendStatus = async (t, i) => {
-                let s = await dizquetv.checkExistingPlexServer(scope.servers[i].name);
+                let s = await ayoitson.checkExistingPlexServer(scope.servers[i].name);
                 if (scope.servers[i].backendPending == t) {
                     // avoid updating for a previous instance of the row
                     scope.servers[i].backendStatus = s.status;
@@ -115,7 +115,7 @@ module.exports = function (plex, dizquetv, $timeout) {
                         new Promise( (resolve, reject) => $timeout( () => {resolve(-1)}, 60000) ),
                         (async() => {
                             let s1 = await plex.check( hypothethical );
-                            let s2 = (await dizquetv.checkNewPlexServer(hypothethical)).status;
+                            let s2 = (await ayoitson.checkNewPlexServer(hypothethical)).status;
                             if (s1 == 1 && s2 == 1) {
                                 return 1;
                             } else {
@@ -193,8 +193,8 @@ module.exports = function (plex, dizquetv, $timeout) {
                             }
                         }
                         connection.arGuide = false
-                        connection.arChannels = false // should not be enabled unless dizqueTV tuner already added to plex
-                        await dizquetv.addPlexServer(connection);
+                        connection.arChannels = false // should not be enabled unless Ayoitson tuner already added to plex
+                        await ayoitson.addPlexServer(connection);
                     } catch (err) {
                         scope.serverError = "Could not add Plex server: There was an error.";
                         console.error("error adding server", err);
@@ -204,16 +204,16 @@ module.exports = function (plex, dizquetv, $timeout) {
                 scope.isProcessing = false;
                 scope.refreshServerList();
             }
-            dizquetv.getPlexSettings().then((settings) => {
+            ayoitson.getPlexSettings().then((settings) => {
                 scope.settings = settings
             })
             scope.updateSettings = (settings) => {
-                dizquetv.updatePlexSettings(settings).then((_settings) => {
+                ayoitson.updatePlexSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }
             scope.resetSettings = (settings) => {
-                dizquetv.resetPlexSettings(settings).then((_settings) => {
+                ayoitson.resetPlexSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }

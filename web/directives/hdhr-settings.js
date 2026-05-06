@@ -1,4 +1,4 @@
-module.exports = function (dizquetv, $timeout) {
+module.exports = function (ayoitson, $timeout) {
     return {
         restrict: 'E',
         templateUrl: 'templates/hdhr-settings.html',
@@ -6,7 +6,7 @@ module.exports = function (dizquetv, $timeout) {
         scope: {
         },
         link: function (scope, element, attrs) {
-            dizquetv.getHdhrSettings().then((settings) => {
+            ayoitson.getHdhrSettings().then((settings) => {
                 scope.settings = settings
             })
             scope.updateSettings = (settings) => {
@@ -19,12 +19,12 @@ module.exports = function (dizquetv, $timeout) {
                     $timeout(() => {
                         scope.error = null
                     }, 3500)
-                    dizquetv.updateHdhrSettings(settings).then((_settings) => {
+                    ayoitson.updateHdhrSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }
             scope.resetSettings = (settings) => {
-                dizquetv.resetHdhrSettings(settings).then((_settings) => {
+                ayoitson.resetHdhrSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }
