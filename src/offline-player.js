@@ -7,91 +7,98 @@
  * can be used to play the program.
  **/
 const EventEmitter = require('events');
-const FFMPEG = require('./ffmpeg')
-const { getInternalBaseUrl } = require('./lib/url')
+const FFMPEG = require('./ffmpeg');
+const { getInternalBaseUrl } = require('./lib/url');
 
 class OfflinePlayer {
-    constructor(error, context) {
-        this.context = context;
-        this.error = error;
-        const baseUrl = getInternalBaseUrl(context.req);
-        if (context.isLoading === true) {
-            context.channel = JSON.parse( JSON.stringify(context.channel) );
-            context.channel.offlinePicture = `${baseUrl}/images/loading-screen.png`;
-            context.channel.offlineSoundtrack = undefined;
-        }
-        if (context.isInterlude === true) {
-            context.channel = JSON.parse( JSON.stringify(context.channel) );
-            context.channel.offlinePicture = `${baseUrl}/images/black.png`;
-            context.channel.offlineSoundtrack = undefined;
-        }
-        this.ffmpeg = new FFMPEG(context.ffmpegSettings, context.channel);
-        this.ffmpeg.setAudioOnly(this.context.audioOnly);
+  constructor(error, context) {
+    this.context = context;
+    this.error = error;
+    const baseUrl = getInternalBaseUrl(context.req);
+    if (context.isLoading === true) {
+      context.channel = JSON.parse(JSON.stringify(context.channel));
+      context.channel.offlinePicture = `${baseUrl}/images/loading-screen.png`;
+      context.channel.offlineSoundtrack = undefined;
     }
-
-    cleanUp() {
-        this.ffmpeg.kill();
+    if (context.isInterlude === true) {
+      context.channel = JSON.parse(JSON.stringify(context.channel));
+      context.channel.offlinePicture = `${baseUrl}/images/black.png`;
+      context.channel.offlineSoundtrack = undefined;
     }
+    this.ffmpeg = new FFMPEG(context.ffmpegSettings, context.channel);
+    this.ffmpeg.setAudioOnly(this.context.audioOnly);
+  }
 
-    async play(outStream) {
-        try {
-            let emitter = new EventEmitter();
-            let ffmpeg = this.ffmpeg;
-            let lineupItem = this.context.lineupItem;
-            let duration = lineupItem.streamDuration - lineupItem.start;
-            let ff;
-            if (this.error) {
-                ff = await ffmpeg.spawnError(duration);
-            } else {
-                ff = await ffmpeg.spawnOffline(duration);
-            }
-            ff.pipe(outStream,  {'end':false} );
+  cleanUp() {
+    this.ffmpeg.kill();
+  }
 
-            ffmpeg.on('end', () => {
-                emitter.emit('end');
-            });
-            ffmpeg.on('close', () => {
-                emitter.emit('close');
-            });
-            ffmpeg.on('error', async (err) => {
-                //wish this code wasn't repeated.
-                if (! this.error ) {
-                    console.log("Replacing failed stream with error stream");
-                    ff.unpipe(outStream);
-                    ffmpeg.removeAllListeners('data');
-                    ffmpeg.removeAllListeners('end');
-                    ffmpeg.removeAllListeners('error');
-                    ffmpeg.removeAllListeners('close');
-                    ffmpeg = new FFMPEG(this.context.ffmpegSettings, this.context.channel);  // Set the transcoder options
-                    ffmpeg.setAudioOnly(this.context.audioOnly);
-                    ffmpeg.on('close', () => {
-                        emitter.emit('close');
-                    });
-                    ffmpeg.on('end', () => {
-                        emitter.emit('end');
-                    });
-                    ffmpeg.on('error', (err) => {
-                        emitter.emit('error', err );
-                    });
+  async play(outStream) {
+    try {
+      let emitter = new EventEmitter();
+      let ffmpeg = this.ffmpeg;
+      let lineupItem = this.context.lineupItem;
+      let duration = lineupItem.streamDuration - lineupItem.start;
+      let ff;
+      if (this.error) {
+        ff = await ffmpeg.spawnError(duration);
+      } else {
+        ff = await ffmpeg.spawnOffline(duration);
+      }
+      ff.pipe(outStream, { end: false });
 
-                    ff = await ffmpeg.spawnError('oops', 'oops', Math.min(duration, 60000) );
-                    ff.pipe(outStream);
-                } else {
-                    emitter.emit('error', err);
-                }
+      ffmpeg.on('end', () => {
+        emitter.emit('end');
+      });
+      ffmpeg.on('close', () => {
+        emitter.emit('close');
+      });
+      ffmpeg.on('error', async (err) => {
+        //wish this code wasn't repeated.
+        if (!this.error) {
+          console.log('Replacing failed stream with error stream');
+          ff.unpipe(outStream);
+          ffmpeg.removeAllListeners('data');
+          ffmpeg.removeAllListeners('end');
+          ffmpeg.removeAllListeners('error');
+          ffmpeg.removeAllListeners('close');
+          ffmpeg = new FFMPEG(
+            this.context.ffmpegSettings,
+            this.context.channel
+          ); // Set the transcoder options
+          this.ffmpeg = ffmpeg;
+          ffmpeg.setAudioOnly(this.context.audioOnly);
+          ffmpeg.on('close', () => {
+            emitter.emit('close');
+          });
+          ffmpeg.on('end', () => {
+            emitter.emit('end');
+          });
+          ffmpeg.on('error', (err) => {
+            emitter.emit('error', err);
+          });
 
-            });
-            return emitter;
-        } catch(err) {
-            if (err instanceof Error) {
-                throw err;
-            } else {
-                throw Error("Error when attempting to play offline screen: " + JSON.stringify(err) );
-            }
+          ff = await ffmpeg.spawnError(
+            'oops',
+            'oops',
+            Math.min(duration, 60000)
+          );
+          ff.pipe(outStream);
+        } else {
+          emitter.emit('error', err);
         }
+      });
+      return emitter;
+    } catch (err) {
+      if (err instanceof Error) {
+        throw err;
+      } else {
+        throw Error(
+          'Error when attempting to play offline screen: ' + JSON.stringify(err)
+        );
+      }
     }
-
-
+  }
 }
 
 module.exports = OfflinePlayer;

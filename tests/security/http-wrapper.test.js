@@ -115,6 +115,34 @@ describe('Phase 2 SSRF-defended HTTP wrapper', () => {
     }
   });
 
+  test('allows explicit private-network Plex requests only when allowlisted', async () => {
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    const response = await httpGet('https://plex.lan.example:32400/status', {
+      allowlist: ['https://plex.lan.example:32400'],
+      allowPrivateNetwork: true,
+      fetchImpl,
+      resolveHost: resolveTo('192.168.1.117'),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual({ ok: true });
+
+    await expect(
+      httpGet('https://blocked.lan.example:32400/status', {
+        allowlist: ['https://plex.lan.example:32400'],
+        allowPrivateNetwork: true,
+        fetchImpl,
+        resolveHost: resolveTo('192.168.1.118'),
+      })
+    ).rejects.toThrow(/not allowlisted/);
+  });
+
   test('httpPost sends JSON with manual redirects disabled', async () => {
     const fetchImpl = vi.fn(async () => {
       return new Response(null, { status: 204 });

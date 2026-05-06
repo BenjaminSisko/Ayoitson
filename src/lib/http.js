@@ -139,9 +139,10 @@ async function validateOutboundUrl(url, opts = {}) {
   const parsed = parseHttpUrl(url);
   const hostname = normalizeHostname(parsed.hostname);
   const addresses = await resolveAddresses(hostname, opts);
+  const isAllowlisted = isAllowedUrl(parsed, opts);
 
   for (const address of addresses) {
-    if (isPrivateAddress(address.address)) {
+    if (isPrivateAddress(address.address) && !opts.allowPrivateNetwork) {
       throw new HttpRequestError(
         `Blocked outbound request to private address ${address.address}`,
         {
@@ -151,7 +152,7 @@ async function validateOutboundUrl(url, opts = {}) {
     }
   }
 
-  if (!isAllowedUrl(parsed, opts)) {
+  if (!isAllowlisted) {
     throw new HttpRequestError(
       `Outbound URL is not allowlisted: ${parsed.origin}`,
       {

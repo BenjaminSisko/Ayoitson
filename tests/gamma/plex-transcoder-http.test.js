@@ -109,6 +109,72 @@ describe('Phase 2 PlexTranscoder HTTP wrapper migration', () => {
     expect(input.headers['X-Plex-Token']).toBe('plex-token');
   });
 
+  test('transcode and timeline URLs do not include control whitespace', () => {
+    const transcoder = createTranscoder();
+
+    transcoder.setTranscodingArgs(false, true, false, false);
+    const transcodeUrl = `${transcoder.transcodeUrlBase}${transcoder.transcodingArgs}`;
+    const transcodeParams = new URL(transcodeUrl).searchParams;
+    const statusUrl = transcoder.getStatusUrl();
+    const statusParams = new URL(statusUrl).searchParams;
+
+    expect(transcoder.transcodingArgs).not.toMatch(/\s/);
+    expect(statusUrl).not.toMatch(/\s/);
+    expect(transcodeParams.get('X-Plex-Device')).toBe('channel-7');
+    expect(transcodeParams.get('path')).toBe('/library/metadata/1');
+    expect(transcodeParams.get('X-Plex-Client-Profile-Extra')).toContain(
+      'add-transcode-target('
+    );
+    expect(statusParams.get('containerKey')).toContain(
+      '/video/:/transcode/universal/decision?'
+    );
+    expect(statusParams.get('X-Plex-Device')).toBe('channel-7');
+  });
+
+  test('metadata requests may reach an explicitly configured private Plex host', async () => {
+    global.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          MediaContainer: {
+            Metadata: [{ ratingKey: '1' }],
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      );
+    });
+    const transcoder = new PlexTranscoder(
+      'client-id',
+      {
+        uri: 'https://192.168.1.117:32400',
+        accessToken: 'plex-token',
+      },
+      {
+        ...createTranscoder().settings,
+        debugLogging: false,
+      },
+      {
+        number: 7,
+      },
+      {
+        key: '/library/metadata/1',
+        plexFile: '/library/parts/1/file.mp4',
+        ratingKey: '1',
+        start: 0,
+        duration: 60000,
+      }
+    );
+
+    const data = await transcoder.getDirectInfo();
+    const [url, init] = global.fetch.mock.calls[0];
+
+    expect(data.MediaContainer.Metadata[0].ratingKey).toBe('1');
+    expect(url).toBe('https://192.168.1.117:32400/library/metadata/1');
+    expect(init.headers['X-Plex-Token']).toBe('plex-token');
+  });
+
   test('MDE failures reject with Plex decision details', async () => {
     global.fetch = vi.fn(async () => {
       return new Response(

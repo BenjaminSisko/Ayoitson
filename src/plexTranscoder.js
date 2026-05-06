@@ -183,6 +183,7 @@ class PlexTranscoder {
   getHttpOptions(headers = { Accept: 'application/json' }) {
     return {
       allowlist: [this.server.uri],
+      allowPrivateNetwork: true,
       headers: this.getPlexHeaders(headers),
     };
   }
@@ -259,37 +260,38 @@ add-limitation(scope=videoCodec&scopeName=*&type=upperBound&name=video.height&va
       clientProfile += `+add-limitation(scope=videoCodec&scopeName=*&type=notMatch&name=video.scanType&value=interlaced)`;
     }
 
-    let clientProfile_enc = encodeURIComponent(clientProfile);
-    this.transcodingArgs = `X-Plex-Platform=${profileName}&\
-X-Plex-Product=${this.product}&\
-X-Plex-Client-Platform=${profileName}&\
-X-Plex-Client-Profile-Name=${profileName}&\
-X-Plex-Device-Name=${this.deviceName}&\
-	X-Plex-Device=${this.device}&\
-	X-Plex-Client-Identifier=${this.clientIdentifier}&\
-	X-Plex-Platform=${profileName}&\
-	X-Plex-Client-Profile-Extra=${clientProfile_enc}&\
-protocol=${this.settings.streamProtocol}&\
-Connection=keep-alive&\
-hasMDE=${hasMDE}&\
-path=${this.key}&\
-mediaIndex=0&\
-partIndex=0&\
-fastSeek=1&\
-directPlay=${isDirectPlay}&\
-directStream=1&\
-directStreamAudio=1&\
-copyts=1&\
-audioBoost=${this.settings.audioBoost}&\
-mediaBufferSize=${mediaBufferSize}&\
-session=${this.session}&\
-offset=${this.currTimeS}&\
-subtitles=${subtitles}&\
-subtitleSize=${this.settings.subtitleSize}&\
-maxVideoBitrate=${bitrate}&\
-videoQuality=${videoQuality}&\
-videoResolution=${resolution}&\
-lang=en`;
+    this.transcodingArgs = toPlexQueryString([
+      ['X-Plex-Platform', profileName],
+      ['X-Plex-Product', this.product],
+      ['X-Plex-Client-Platform', profileName],
+      ['X-Plex-Client-Profile-Name', profileName],
+      ['X-Plex-Device-Name', this.deviceName],
+      ['X-Plex-Device', this.device],
+      ['X-Plex-Client-Identifier', this.clientIdentifier],
+      ['X-Plex-Platform', profileName],
+      ['X-Plex-Client-Profile-Extra', clientProfile],
+      ['protocol', this.settings.streamProtocol],
+      ['Connection', 'keep-alive'],
+      ['hasMDE', hasMDE],
+      ['path', this.key],
+      ['mediaIndex', 0],
+      ['partIndex', 0],
+      ['fastSeek', 1],
+      ['directPlay', isDirectPlay],
+      ['directStream', 1],
+      ['directStreamAudio', 1],
+      ['copyts', 1],
+      ['audioBoost', this.settings.audioBoost],
+      ['mediaBufferSize', mediaBufferSize],
+      ['session', this.session],
+      ['offset', this.currTimeS],
+      ['subtitles', subtitles],
+      ['subtitleSize', this.settings.subtitleSize],
+      ['maxVideoBitrate', bitrate],
+      ['videoQuality', videoQuality],
+      ['videoResolution', resolution],
+      ['lang', 'en'],
+    ]);
   }
 
   isVideoDirectStream() {
@@ -502,23 +504,23 @@ lang=en`;
     let profileName = `Generic`;
 
     let containerKey = `/video/:/transcode/universal/decision?${this.transcodingArgs}`;
-    let containerKey_enc = encodeURIComponent(containerKey);
 
-    let statusUrl = `${this.server.uri}/:/timeline?\
-containerKey=${containerKey_enc}&\
-ratingKey=${this.ratingKey}&\
-state=${this.playState}&\
-key=${this.key}&\
-time=${this.currTimeMs}&\
-duration=${this.duration}&\
-X-Plex-Product=${this.product}&\
-X-Plex-Platform=${profileName}&\
-X-Plex-Client-Platform=${profileName}&\
-X-Plex-Client-Profile-Name=${profileName}&\
-	X-Plex-Device-Name=${this.deviceName}&\
-	X-Plex-Device=${this.device}&\
-	X-Plex-Client-Identifier=${this.clientIdentifier}&\
-	X-Plex-Platform=${profileName}`;
+    let statusUrl = `${this.server.uri}/:/timeline?${toPlexQueryString([
+      ['containerKey', containerKey],
+      ['ratingKey', this.ratingKey],
+      ['state', this.playState],
+      ['key', this.key],
+      ['time', this.currTimeMs],
+      ['duration', this.duration],
+      ['X-Plex-Product', this.product],
+      ['X-Plex-Platform', profileName],
+      ['X-Plex-Client-Platform', profileName],
+      ['X-Plex-Client-Profile-Name', profileName],
+      ['X-Plex-Device-Name', this.deviceName],
+      ['X-Plex-Device', this.device],
+      ['X-Plex-Client-Identifier', this.clientIdentifier],
+      ['X-Plex-Platform', profileName],
+    ])}`;
 
     return statusUrl;
   }
@@ -585,6 +587,14 @@ function getOneOrUndefined(object, field) {
     return undefined;
   }
   return x[0];
+}
+
+function toPlexQueryString(pairs) {
+  const params = new URLSearchParams();
+  for (const [key, value] of pairs) {
+    params.append(key, String(value));
+  }
+  return params.toString();
 }
 
 function redactPlexTokens(value) {
