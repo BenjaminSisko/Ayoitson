@@ -48,7 +48,12 @@ describe('ChannelListView', () => {
     await user.type(within(dialog).getByLabelText('Channel number'), '303');
     await user.click(within(dialog).getByRole('button', { name: /^create$/i }));
 
-    expect(mockedApi.createChannel).toHaveBeenCalledWith({ number: 303 });
+    expect(mockedApi.createChannel).toHaveBeenCalledWith({
+      number: 303,
+      name: 'Channel 303',
+      programs: [],
+      fallback: [],
+    });
     expect(navigate).toHaveBeenCalledWith('/v2/channels/303');
 
     await user.click(screen.getAllByRole('button', { name: /delete/i })[0]);

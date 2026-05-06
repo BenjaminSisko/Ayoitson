@@ -52,6 +52,15 @@ function sortChannels(channels: ChannelSummary[]) {
   return [...channels].sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
 }
 
+function starterChannel(number: number): ChannelCreate {
+  return {
+    number,
+    name: `Channel ${number}`,
+    programs: [],
+    fallback: [],
+  };
+}
+
 export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -108,7 +117,7 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
       setFormError('Channel number must be a positive whole number.');
       return;
     }
-    createChannel.mutate({ number: parsed });
+    createChannel.mutate(starterChannel(parsed));
   }
 
   function confirmDelete(number: number) {

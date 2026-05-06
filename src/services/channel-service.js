@@ -14,7 +14,10 @@ class ChannelService extends events.EventEmitter {
   }
 
   async saveChannel(number, channelJson, options) {
-    let channel = cleanUpChannel(channelJson);
+    let channel = cleanUpChannel({
+      ...(channelJson || {}),
+      number: Number(number),
+    });
     if (channel.watermark && channel.watermark.enabled === true) {
       await validateWatermark(channel.watermark);
     }
@@ -27,7 +30,7 @@ class ChannelService extends events.EventEmitter {
       this.onDemandService.fixupChannelBeforeSave(channel);
     }
     channelCache.saveChannelConfig(number, channel);
-    await channelDB.saveChannel(number, channel);
+    await this.channelDB.saveChannel(number, channel);
 
     this.emit('channel-update', {
       channelNumber: number,
@@ -82,6 +85,18 @@ function cleanUpProgram(program) {
 }
 
 function cleanUpChannel(channel) {
+  if (!Array.isArray(channel.programs)) {
+    channel.programs = [];
+  }
+  if (!Array.isArray(channel.fallback)) {
+    channel.fallback = [];
+  }
+  if (
+    (typeof channel.name !== 'string' || channel.name.trim() === '') &&
+    Number.isInteger(channel.number)
+  ) {
+    channel.name = `Channel ${channel.number}`;
+  }
   if (typeof channel.groupTitle === 'undefined' || channel.groupTitle === '') {
     channel.groupTitle = 'Ayoitson';
   }
