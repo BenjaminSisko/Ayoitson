@@ -25,6 +25,7 @@ export type PlexBrowserItem = {
 
 export type PlexLibraryBrowserProps = {
   onPick?: (items: PlexBrowserItem[]) => void;
+  framed?: boolean;
 };
 
 const TREE_INDENT_CLASSES = [
@@ -45,7 +46,10 @@ export function PlexLibraryBrowser(props: PlexLibraryBrowserProps) {
   );
 }
 
-function PlexLibraryBrowserContent({ onPick }: PlexLibraryBrowserProps) {
+function PlexLibraryBrowserContent({
+  onPick,
+  framed = true,
+}: PlexLibraryBrowserProps) {
   const [selectedServerName, setSelectedServerName] = useState('');
   const [selectedItems, setSelectedItems] = useState<PlexBrowserItem[]>([]);
   const servers = useSuspenseQuery({
@@ -86,6 +90,61 @@ function PlexLibraryBrowserContent({ onPick }: PlexLibraryBrowserProps) {
     );
   }
 
+  const content = (
+    <>
+      <div className="grid gap-sp-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid gap-sp-2">
+          <AyoLabel htmlFor="plex-browser-server">Server</AyoLabel>
+          <AyoSelect
+            id="plex-browser-server"
+            value={selectedServer?.name || ''}
+            onChange={(event) => chooseServer(event.target.value)}
+          >
+            {servers.data.map((server) => (
+              <option key={server.name} value={server.name}>
+                {server.name}
+              </option>
+            ))}
+          </AyoSelect>
+          {selectedServer?.uri && (
+            <p className="truncate font-mono text-12 text-text-muted">
+              {selectedServer.uri}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2 border border-border-default bg-surface-page p-sp-3">
+          {tree.map((item) => (
+            <TreeNode
+              key={item.id}
+              item={item}
+              depth={0}
+              selectedIds={selectedItems.map((selected) => selected.id)}
+              onToggle={toggleItem}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-sp-4 flex justify-end">
+        <AyoButton
+          variant="primary"
+          disabled={selectedItems.length === 0}
+          onClick={() => onPick?.(selectedItems)}
+        >
+          Use selection
+        </AyoButton>
+      </div>
+    </>
+  );
+
+  if (!framed) {
+    return (
+      <div className="rounded-3 border border-border-default bg-surface-page p-sp-3">
+        {content}
+      </div>
+    );
+  }
+
   return (
     <AyoCard>
       <AyoCard.Header>
@@ -97,50 +156,7 @@ function PlexLibraryBrowserContent({ onPick }: PlexLibraryBrowserProps) {
         </div>
         <AyoBadge tone="neutral">{selectedItems.length} selected</AyoBadge>
       </AyoCard.Header>
-      <AyoCard.Body>
-        <div className="grid gap-sp-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className="grid gap-sp-2">
-            <AyoLabel htmlFor="plex-browser-server">Server</AyoLabel>
-            <AyoSelect
-              id="plex-browser-server"
-              value={selectedServer?.name || ''}
-              onChange={(event) => chooseServer(event.target.value)}
-            >
-              {servers.data.map((server) => (
-                <option key={server.name} value={server.name}>
-                  {server.name}
-                </option>
-              ))}
-            </AyoSelect>
-            {selectedServer?.uri && (
-              <p className="truncate font-mono text-12 text-text-muted">
-                {selectedServer.uri}
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-2 border border-border-default bg-surface-page p-sp-3">
-            {tree.map((item) => (
-              <TreeNode
-                key={item.id}
-                item={item}
-                depth={0}
-                selectedIds={selectedItems.map((selected) => selected.id)}
-                onToggle={toggleItem}
-              />
-            ))}
-          </div>
-        </div>
-      </AyoCard.Body>
-      <AyoCard.Footer>
-        <AyoButton
-          variant="primary"
-          disabled={selectedItems.length === 0}
-          onClick={() => onPick?.(selectedItems)}
-        >
-          Use selection
-        </AyoButton>
-      </AyoCard.Footer>
+      <AyoCard.Body>{content}</AyoCard.Body>
     </AyoCard>
   );
 }

@@ -4,7 +4,8 @@ import { CalendarDays, Library, ListVideo, Settings } from 'lucide-react';
 import { AyoButton, AyoLogo } from '@/components/ayo';
 import { PlexLibraryBrowser } from '@/features/plex-browser/PlexLibraryBrowser';
 import { SettingsView } from '@/features/settings/SettingsView';
-import { ChannelDetailPlaceholder, ChannelListView } from '@/routes/channels';
+import { ChannelConfigPage } from '@/routes/channels/$number';
+import { ChannelListView } from '@/routes/channels';
 import { GuideView } from '@/routes/guide';
 import { cn } from '@/lib/cn';
 
@@ -137,7 +138,7 @@ export function AppShell() {
       {route.name === 'settings' && <SettingsView />}
       {route.name === 'channels' && <ChannelListView onNavigate={navigate} />}
       {route.name === 'channel-detail' && (
-        <ChannelDetailPlaceholder number={route.number} onNavigate={navigate} />
+        <ChannelConfigPage number={route.number} onNavigate={navigate} />
       )}
       {route.name === 'guide' && <GuideView />}
       {route.name === 'library' && <PlexLibraryBrowser />}

@@ -9,6 +9,15 @@ export type ChannelSummary = components['schemas']['ChannelSummary'];
 export type Channel = components['schemas']['Channel'];
 export type ChannelCreate = components['schemas']['Channel'];
 export type XmltvSettings = components['schemas']['XmltvSettings'];
+export type FillerListSummary = Record<string, unknown> & {
+  id?: string;
+  _id?: string;
+  name?: string;
+};
+export type ScheduleToolResult = Record<string, unknown> & {
+  programs?: Array<Record<string, unknown>>;
+  schedule?: Record<string, unknown>;
+};
 
 export type ApiKeyMetadata = {
   id: string;
@@ -257,6 +266,16 @@ export const apiClient = {
     });
   },
 
+  updateChannel(number: number, channel: Channel) {
+    return request<{ number: number }>(
+      '/api/channels/' + encodeURIComponent(String(number)),
+      {
+        method: 'PUT',
+        body: channel,
+      }
+    );
+  },
+
   getChannel(number: number, options: { programless?: boolean } = {}) {
     const search = options.programless ? '?programless=true' : '';
     return request<Channel>(
@@ -279,5 +298,29 @@ export const apiClient = {
         '?' +
         query.toString()
     );
+  },
+
+  listFillerLists() {
+    return request<FillerListSummary[]>('/api/filler-lists');
+  },
+
+  applyTimeSlots(
+    programs: Array<Record<string, unknown>>,
+    schedule: Record<string, unknown>
+  ) {
+    return request<ScheduleToolResult>('/api/guide/time-slots', {
+      method: 'POST',
+      body: { programs, schedule },
+    });
+  },
+
+  applyRandomSlots(
+    programs: Array<Record<string, unknown>>,
+    schedule: Record<string, unknown>
+  ) {
+    return request<ScheduleToolResult>('/api/guide/random-slots', {
+      method: 'POST',
+      body: { programs, schedule },
+    });
   },
 };
