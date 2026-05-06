@@ -1,4 +1,4 @@
-const exec = require('child_process').exec;
+const execFile = require('child_process').execFile;
 
 class FFMPEGInfo {
     constructor(opts) {
@@ -7,7 +7,7 @@ class FFMPEGInfo {
     async getVersion() {
         try {
             let s = await new Promise( (resolve, reject) => {
-                exec( `"${this.ffmpegPath}" -version`, function(error, stdout, stderr){
+                execFile(this.ffmpegPath, ['-version'], function(error, stdout){
                     if (error !== null) {
                         reject(error);
                     } else {
