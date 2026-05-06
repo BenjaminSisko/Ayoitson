@@ -3,6 +3,9 @@ dist/
 bin/
 .pseudotv/
 .dizquetv/
+.ayoitson/
+.dizquetv-legacy-*/
+.dizquetv.backup-pre-codex-smoke-*/
 !tests/fixtures/dizquetv-baseline/.dizquetv/
 !tests/fixtures/dizquetv-baseline/.dizquetv/**
 web/public/bundle.js
