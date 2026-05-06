@@ -12,6 +12,14 @@ const i18nextBackend = require('i18next-fs-backend/cjs');
 const api = require('./src/api')
 const video = require('./src/video')
 const HDHR = require('./src/hdhr')
+const { openAyoitsonDatabase } = require('./src/storage/sqlite')
+const { createAuthMiddleware } = require('./src/middleware/auth')
+const {
+    createAuthFailureLimiter,
+    createStreamLimiter,
+} = require('./src/middleware/rate-limit')
+const { createCorsMiddleware } = require('./src/middleware/cors')
+const { createHelmetMiddleware } = require('./src/middleware/helmet')
 const FileCacheService = require('./src/services/file-cache-service');
 const CacheImageService = require('./src/services/cache-image-service');
 const ChannelService = require("./src/services/channel-service");
@@ -265,7 +273,30 @@ channelService.on("channel-update", (data) => {
 
 let hdhr = HDHR(db, channelDB)
 let app = express()
+
+// trust proxy: only honor X-Forwarded-* from loopback / link-local /
+// unique-local sources. Closes F9-trustproxy and the HDHR descriptor
+// host-header reflection (src/hdhr.js).
+app.set('trust proxy', 'loopback,linklocal,uniquelocal')
+
 eventService.setup(app);
+
+// --- Phase 4 security baseline (Lane Epsilon) ---
+// CORS deny-by-default runs first so cross-origin preflights never reach
+// further middleware. helmet sets CSP / HSTS / X-Frame-Options /
+// X-Content-Type-Options / Referrer-Policy on every response. The streaming
+// limiter is mounted on /video, /m3u, and the HDHR endpoints; the
+// auth-failure limiter is mounted in front of /api/* so brute-force probes
+// against api_keys cost the attacker.
+app.use(createCorsMiddleware())
+app.use(createHelmetMiddleware())
+app.use(createStreamLimiter())
+
+// API key store reuses the runtime SQLite database so api_keys live in
+// the same file as the rest of the operator's data.
+const apiKeyDb = openAyoitsonDatabase({ databaseDir: process.env.DATABASE })
+const requireApiKey = createAuthMiddleware(apiKeyDb)
+const authFailureLimiter = createAuthFailureLimiter()
 
 app.use(
     i18nextMiddleware.handle(i18next, {})
@@ -309,7 +340,10 @@ app.use('/favicon.svg', express.static(
 ) );
 app.use('/custom.css', express.static(path.join(process.env.DATABASE, 'custom.css')))
 
-// API Routers
+// API Routers — gated by X-API-Key (Phase 4). The auth-failure limiter
+// runs after the auth middleware so only failed attempts are counted.
+app.use('/api', authFailureLimiter)
+app.use('/api', requireApiKey)
 app.use(api.router(db, channelService, fillerDB, customShowDB, xmltvInterval, guideService, m3uService, eventService, ffmpegSettingsService))
 app.use('/api/cache/images', cacheImageService.apiRouters())
 app.use('/' + fontAwesome, express.static(path.join(process.env.DATABASE, fontAwesome)))
