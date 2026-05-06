@@ -26,11 +26,12 @@ function createCorsMiddleware(options = {}) {
 
   return function corsDenyByDefault(req, res, next) {
     const origin = req.get && req.get('origin');
+    const requestOrigin = getRequestOrigin(req);
 
     // Same-origin browser requests do not send Origin (or send the
     // server's own origin). Server-to-server clients (curl, HDHR, Plex
     // DVR) likewise do not send Origin. All of these pass through.
-    if (!origin) {
+    if (!origin || origin === requestOrigin) {
       return next();
     }
 
@@ -57,7 +58,15 @@ function createCorsMiddleware(options = {}) {
   };
 }
 
+function getRequestOrigin(req) {
+  if (!req || !req.get) return null;
+  const host = req.get('host');
+  if (!host) return null;
+  return `${req.protocol}://${host}`;
+}
+
 module.exports = {
   createCorsMiddleware,
+  getRequestOrigin,
   parseAllowlist,
 };

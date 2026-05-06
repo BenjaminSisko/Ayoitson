@@ -12,8 +12,8 @@ function buildApp(options) {
   return app;
 }
 
-describe('Phase 4 helmet headers', () => {
-  test('default (report-only CSP) ships expected headers', async () => {
+describe('Phase 5 helmet headers', () => {
+  test('default enforced CSP ships expected headers without unsafe-inline', async () => {
     const app = buildApp({});
     const res = await request(app).get('/anything');
     expect(res.status).toBe(200);
@@ -23,18 +23,19 @@ describe('Phase 4 helmet headers', () => {
       'strict-origin-when-cross-origin'
     );
     expect(res.headers['strict-transport-security']).toMatch(/max-age=/);
-    // CSP defaults to report-only for Phase 4 to avoid breaking the
-    // legacy AngularJS bundle.
-    expect(res.headers['content-security-policy-report-only']).toBeDefined();
-    expect(res.headers['content-security-policy']).toBeUndefined();
-  });
-
-  test('enforce mode emits Content-Security-Policy', async () => {
-    const app = buildApp({ enforce: true });
-    const res = await request(app).get('/anything');
     expect(res.headers['content-security-policy']).toBeDefined();
     expect(res.headers['content-security-policy']).toMatch(/default-src/);
+    expect(res.headers['content-security-policy']).not.toContain(
+      "'unsafe-inline'"
+    );
     expect(res.headers['content-security-policy-report-only']).toBeUndefined();
+  });
+
+  test('explicit report-only mode emits Content-Security-Policy-Report-Only', async () => {
+    const app = buildApp({ enforce: false });
+    const res = await request(app).get('/anything');
+    expect(res.headers['content-security-policy-report-only']).toBeDefined();
+    expect(res.headers['content-security-policy']).toBeUndefined();
   });
 
   test('per-response CSP nonce is present on res.locals', async () => {

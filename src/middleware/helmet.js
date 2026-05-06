@@ -3,14 +3,12 @@
 // HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, and
 // Referrer-Policy strict-origin-when-cross-origin.
 //
-// CSP posture for Phase 4:
-//   - The legacy AngularJS bundle still has inline templates and inline
-//     event handlers. Enforcing a strict no-unsafe-inline CSP would break
-//     it. To avoid blocking the operator UI before the Phase 5 React
-//     rewrite, this module ships CSP in **report-only** mode by default.
-//     Phase 5 flips AYOITSON_CSP_ENFORCE=1 once the React UI is up.
-//   - A per-response nonce is still generated and exposed via res.locals.
-//     cspNonce so any new template can opt into nonce-based scripts now.
+// CSP posture after the Phase 5 React cutover:
+//   - CSP is enforced by default; set AYOITSON_CSP_ENFORCE=0 only for a
+//     temporary local diagnostic report-only run.
+//   - A per-response nonce is generated and exposed via res.locals.cspNonce.
+//     The React HTML fallback replaces the Vite nonce placeholder at request
+//     time before serving web/dist/index.html.
 
 'use strict';
 
@@ -31,7 +29,7 @@ function buildCspDirectives() {
       // template via `nonce-${res.locals.cspNonce}`.
       (_req, res) => `'nonce-${res.locals.cspNonce}'`,
     ],
-    styleSrc: ["'self'", "'unsafe-inline'"], // legacy AngularJS bootstrap
+    styleSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: ["'self'"],
     fontSrc: ["'self'", 'data:'],
@@ -47,7 +45,7 @@ function createHelmetMiddleware(options = {}) {
   const enforce =
     options.enforce !== undefined
       ? Boolean(options.enforce)
-      : process.env.AYOITSON_CSP_ENFORCE === '1';
+      : process.env.AYOITSON_CSP_ENFORCE !== '0';
 
   const cspConfig = {
     useDefaults: true,

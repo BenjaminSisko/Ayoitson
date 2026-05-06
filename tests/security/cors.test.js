@@ -40,6 +40,16 @@ describe('Phase 4 CORS deny-by-default', () => {
     expect(res.body.ok).toBe(true);
   });
 
+  test('same-origin request with Origin header passes', async () => {
+    const app = buildApp({ allowlist: [] });
+    const res = await request(app)
+      .get('/api/ping')
+      .set('Host', '127.0.0.1:8000')
+      .set('Origin', 'http://127.0.0.1:8000');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
   test('allowlisted origin is permitted', async () => {
     const app = buildApp({ allowlist: ['https://ayoitson.example.com'] });
     const res = await request(app)
