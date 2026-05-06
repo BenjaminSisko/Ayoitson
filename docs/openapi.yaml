@@ -78,6 +78,55 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
+  /api/api-keys:
+    get:
+      tags: [auth]
+      summary: List API keys
+      description: Returns key metadata only. Raw keys and hashes are never returned.
+      responses:
+        '200':
+          description: API key metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ApiKeyMetadata' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    post:
+      tags: [auth]
+      summary: Create API key
+      description: Creates a new operator/browser key. The raw key is returned once in this response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApiKeyCreate' }
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedKey' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/api-keys/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    delete:
+      tags: [auth]
+      summary: Revoke API key
+      responses:
+        '200':
+          description: API key revoke result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyRevokeResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
   /api/channels:
     get:
       tags: [channels]
@@ -847,18 +896,40 @@ components:
     Version:
       type: object
       properties:
-        ayoitson: { type: string }
-        dizquetv: { type: string, deprecated: true }
+        name: { type: string }
+        version: { type: string }
         ffmpeg: { type: string }
         nodejs: { type: string }
     CreatedKey:
       type: object
       required: [metadata, rawKey]
       properties:
-        metadata: { type: object, additionalProperties: true }
+        metadata: { $ref: '#/components/schemas/ApiKeyMetadata' }
         rawKey:
           type: string
           description: Raw API key value. Shown ONCE; never reissued.
+    ApiKeyMetadata:
+      type: object
+      required: [id, name, scopes, createdAt, lastUsedAt, revokedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        scopes:
+          type: array
+          items: { type: string }
+        createdAt: { type: string }
+        lastUsedAt: { type: string, nullable: true }
+        revokedAt: { type: string, nullable: true }
+    ApiKeyCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+    ApiKeyRevokeResult:
+      type: object
+      required: [revoked]
+      properties:
+        revoked: { type: boolean }
     ChannelSummary:
       type: object
       properties:

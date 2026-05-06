@@ -113,6 +113,9 @@ describe('Phase 4 API auth baseline', () => {
       ['get', '/api/guide/last-refresh'],
       ['get', '/api/version'],
       ['post', '/api/uploads/image'],
+      ['get', '/api/api-keys'],
+      ['post', '/api/api-keys'],
+      ['delete', '/api/api-keys/fixture'],
     ];
 
     const failures = [];

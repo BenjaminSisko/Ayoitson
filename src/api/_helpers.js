@@ -91,14 +91,16 @@ function missingPathParam(res, name) {
 }
 
 /**
- * Resolve the on-disk xmltv path from the runtime DATABASE env var. Hard-coded
+ * Resolve the on-disk xmltv path from the runtime data-dir env var. Hard-coded
  * at `${DATABASE}/xmltv.xml` — closes F10-xmltv-readfile by removing the
  * operator-controllable `xmltvSettings.file` field entirely.
  */
 function resolveXmltvPath() {
-  const dir = process.env.DATABASE;
+  const dir = process.env.AYOITSON_DATABASE || process.env.DATABASE;
   if (!dir || typeof dir !== 'string') {
-    throw new Error('DATABASE env var is not set; cannot resolve xmltv path');
+    throw new Error(
+      'AYOITSON_DATABASE env var is not set; cannot resolve xmltv path'
+    );
   }
   return path.join(dir, 'xmltv.xml');
 }

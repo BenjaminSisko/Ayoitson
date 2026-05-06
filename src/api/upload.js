@@ -34,6 +34,10 @@ function createStoredUploadName(originalName) {
   return `${uuidv4()}${extension}`;
 }
 
+function getDatabaseDir() {
+  return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
+
 function createRouter(_deps) {
   const router = express.Router();
 
@@ -53,7 +57,7 @@ function createRouter(_deps) {
         });
       }
       const storedName = createStoredUploadName(originalName);
-      const uploadDir = path.join(process.env.DATABASE, 'images', 'uploads');
+      const uploadDir = path.join(getDatabaseDir(), 'images', 'uploads');
       try {
         fs.mkdirSync(uploadDir, { recursive: true });
         await logo.mv(path.join(uploadDir, storedName));

@@ -31,10 +31,8 @@ function createRouter(deps) {
         const ffmpegSettings = db['ffmpeg-settings'].find()[0];
         const v = await new FFMPEGInfo(ffmpegSettings).getVersion();
         res.send({
-          ayoitson: constants.VERSION_NAME,
-          // dizquetv key kept for now — Lane Delta's identity rename PR will
-          // sweep this. Bug Register: BUG-IDENTITY (out of scope here).
-          dizquetv: constants.VERSION_NAME,
+          name: constants.APP_NAME,
+          version: constants.VERSION_NAME,
           ffmpeg: v,
           nodejs: process.version,
         });

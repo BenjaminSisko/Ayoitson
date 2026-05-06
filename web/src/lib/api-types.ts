@@ -131,6 +131,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/api-keys': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List API keys
+     * @description Returns key metadata only. Raw keys and hashes are never returned.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description API key metadata */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ApiKeyMetadata'][];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        503: components['responses']['ServiceUnavailable'];
+      };
+    };
+    put?: never;
+    /**
+     * Create API key
+     * @description Creates a new operator/browser key. The raw key is returned once in this response.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['ApiKeyCreate'];
+        };
+      };
+      responses: {
+        /** @description API key created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CreatedKey'];
+          };
+        };
+        400: components['responses']['ValidationError'];
+        401: components['responses']['Unauthorized'];
+        503: components['responses']['ServiceUnavailable'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/api-keys/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['ResourceId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoke API key */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: components['parameters']['ResourceId'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description API key revoke result */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ApiKeyRevokeResult'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        503: components['responses']['ServiceUnavailable'];
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/channels': {
     parameters: {
       query?: never;
@@ -633,6 +746,55 @@ export interface paths {
         };
         400: components['responses']['ValidationError'];
         401: components['responses']['Unauthorized'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/plex-servers/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Legacy Plex status helper
+     * @deprecated
+     * @description Legacy compatibility route. Prefer `POST /api/plex-servers/{name}/status-check`.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            name?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Probe result */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PlexStatus'];
+          };
+        };
+        400: components['responses']['ValidationError'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
       };
     };
     delete?: never;
@@ -1878,18 +2040,29 @@ export interface components {
       uptime?: number;
     };
     Version: {
-      ayoitson?: string;
-      /** @deprecated */
-      dizquetv?: string;
+      name?: string;
+      version?: string;
       ffmpeg?: string;
       nodejs?: string;
     };
     CreatedKey: {
-      metadata: {
-        [key: string]: unknown;
-      };
+      metadata: components['schemas']['ApiKeyMetadata'];
       /** @description Raw API key value. Shown ONCE; never reissued. */
       rawKey: string;
+    };
+    ApiKeyMetadata: {
+      id: string;
+      name: string;
+      scopes: string[];
+      createdAt: string;
+      lastUsedAt: string | null;
+      revokedAt: string | null;
+    };
+    ApiKeyCreate: {
+      name: string;
+    };
+    ApiKeyRevokeResult: {
+      revoked: boolean;
     };
     ChannelSummary: {
       number?: number;

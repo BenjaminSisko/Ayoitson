@@ -8,11 +8,11 @@ const {
 } = require('../../scripts/migrate-diskdb-to-sqlite');
 const { decryptToken } = require('../../src/lib/crypto');
 const { openAyoitsonDatabase } = require('../../src/storage/sqlite');
-const manifest = require('../fixtures/dizquetv-baseline/manifest.json');
+const manifest = require('../fixtures/legacy-diskdb-baseline/manifest.json');
 
 const FIXTURE_ROOT = path.resolve(
   __dirname,
-  '../fixtures/dizquetv-baseline/.dizquetv'
+  '../fixtures/legacy-diskdb-baseline/.dizquetv'
 );
 
 function copyFixture() {

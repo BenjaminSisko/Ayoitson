@@ -1,6 +1,6 @@
 {
   "name": "ayoitson",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Create LiveTV channels from your Plex media with Ayoitson",
   "main": "index.js",
   "scripts": {
@@ -67,7 +67,8 @@
     "tailwind-merge": "^3.5.0",
     "unzipper": "0.10.14",
     "uuid": "9.0.1",
-    "xml-writer": "^1.7.0"
+    "xml-writer": "^1.7.0",
+    "zustand": "^5.0.13"
   },
   "bin": "dist/index.js",
   "devDependencies": {
