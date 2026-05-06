@@ -1,0 +1,4 @@
+{
+  "ffmpegPath": "/usr/bin/ffmpeg",
+  "enableTranscoding": true
+}

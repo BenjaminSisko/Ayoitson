@@ -1,0 +1,10 @@
+[
+  {
+    "name": "synthetic-plex",
+    "uri": "http://203.0.113.10:32400",
+    "accessToken": "FIXTURE_TOKEN_REDACTED",
+    "arGuide": false,
+    "arChannels": false,
+    "index": 0
+  }
+]

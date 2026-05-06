@@ -1,0 +1,25 @@
+{
+  "number": 1,
+  "name": "Synthetic Channel",
+  "groupTitle": "Synthetic",
+  "startTime": "2026-05-05T00:00:00.000Z",
+  "fillerCollections": [
+    {
+      "id": "fixture-filler",
+      "weight": 1,
+      "cooldown": 0
+    }
+  ],
+  "fallback": [],
+  "programs": [
+    {
+      "title": "Synthetic Feature",
+      "duration": 1800000,
+      "serverKey": "synthetic-plex",
+      "key": "/library/metadata/1",
+      "ratingKey": "1",
+      "type": "movie",
+      "icon": "http://203.0.113.10:32400/library/metadata/1/thumb/1?X-Plex-Token=FIXTURE_TOKEN_REDACTED"
+    }
+  ]
+}
