@@ -9,6 +9,23 @@ function createTranscoder() {
     },
     {
       debugLogging: false,
+      directStreamBitrate: 10000,
+      enableSubtitles: false,
+      forceDirectPlay: false,
+      maxAudioChannels: 2,
+      maxPlayableResolution: '1920x1080',
+      maxTranscodeResolution: '1920x1080',
+      mediaBufferSize: 100,
+      pathReplace: '',
+      pathReplaceWith: '',
+      streamPath: 'plex',
+      streamProtocol: 'hls',
+      transcodeBitrate: 8000,
+      transcodeMediaBufferSize: 200,
+      updatePlayStatus: false,
+      audioBoost: 100,
+      audioCodecs: 'aac',
+      videoCodecs: 'h264',
     },
     {
       number: 7,
@@ -54,12 +71,11 @@ describe('Phase 2 PlexTranscoder HTTP wrapper migration', () => {
     const [url, init] = global.fetch.mock.calls[0];
 
     expect(data.MediaContainer.Metadata[0].ratingKey).toBe('1');
-    expect(url).toBe(
-      'http://93.184.216.34:32400/library/metadata/1?X-Plex-Token=plex-token'
-    );
+    expect(url).toBe('http://93.184.216.34:32400/library/metadata/1');
     expect(init.method).toBe('GET');
     expect(init.redirect).toBe('manual');
     expect(init.headers.Accept).toBe('application/json');
+    expect(init.headers['X-Plex-Token']).toBe('plex-token');
   });
 
   test('timeline updates post through the HTTP wrapper', async () => {
@@ -74,8 +90,45 @@ describe('Phase 2 PlexTranscoder HTTP wrapper migration', () => {
     const [url, init] = global.fetch.mock.calls[0];
 
     expect(url).toContain('http://93.184.216.34:32400/:/timeline?');
-    expect(url).toContain('X-Plex-Token=plex-token');
+    expect(url).not.toContain('X-Plex-Token=plex-token');
     expect(init.method).toBe('POST');
     expect(init.redirect).toBe('manual');
+    expect(init.headers['X-Plex-Token']).toBe('plex-token');
+  });
+
+  test('transcode URLs and FFmpeg inputs carry Plex token as header only', () => {
+    const transcoder = createTranscoder();
+
+    transcoder.setTranscodingArgs(false, true, false, false);
+    const input = transcoder.getFfmpegPlexInput(
+      `http://93.184.216.34:32400/video/:/transcode/universal/start.m3u8?${transcoder.transcodingArgs}`
+    );
+
+    expect(transcoder.transcodingArgs).not.toContain('X-Plex-Token');
+    expect(input.url).not.toContain('X-Plex-Token');
+    expect(input.headers['X-Plex-Token']).toBe('plex-token');
+  });
+
+  test('MDE failures reject with Plex decision details', async () => {
+    global.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          MediaContainer: {
+            mdeDecisionCode: 2000,
+            mdeDecisionText: 'No playable media',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      );
+    });
+    const transcoder = createTranscoder();
+    transcoder.setTranscodingArgs(false, true, false, false);
+
+    await expect(transcoder.getDecisionUnmanaged(false)).rejects.toThrow(
+      /Plex MDE decision failed \(2000\): No playable media/
+    );
   });
 });

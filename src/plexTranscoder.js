@@ -18,8 +18,8 @@ class PlexTranscoder {
     this.log('Debug logging enabled');
 
     this.key = lineupItem.key;
-    this.metadataPath = `${server.uri}${lineupItem.key}?X-Plex-Token=${server.accessToken}`;
-    this.plexFile = `${server.uri}${lineupItem.plexFile}?X-Plex-Token=${server.accessToken}`;
+    this.metadataPath = `${server.uri}${lineupItem.key}`;
+    this.plexFile = `${server.uri}${lineupItem.plexFile}`;
     if (typeof lineupItem.file !== 'undefined') {
       this.file = lineupItem.file.replace(
         settings.pathReplace,
@@ -78,7 +78,7 @@ class PlexTranscoder {
         await this.getDecision(stream.directPlay);
         if (this.isDirectPlay()) {
           stream.directPlay = true;
-          stream.streamUrl = this.plexFile;
+          stream.streamUrl = this.getFfmpegPlexInput(this.plexFile);
         }
       } catch (err) {
         console.error(
@@ -103,9 +103,15 @@ class PlexTranscoder {
         this.mediaHasNoVideo
       );
       // Update transcode decision for session
-      await this.getDecision(stream.directPlay);
+      try {
+        await this.getDecision(stream.directPlay);
+      } catch (err) {
+        this.log(`Direct play decision update failed: ${err.message}`);
+      }
       stream.streamUrl =
-        this.settings.streamPath === 'direct' ? this.file : this.plexFile;
+        this.settings.streamPath === 'direct'
+          ? this.file
+          : this.getFfmpegPlexInput(this.plexFile);
       if (this.settings.streamPath === 'direct') {
         fs.access(this.file, fs.F_OK, (err) => {
           if (err) {
@@ -130,13 +136,19 @@ class PlexTranscoder {
       );
       // Update transcode decision for session
       await this.getDecision(stream.directPlay);
-      stream.streamUrl = `${this.transcodeUrlBase}${this.transcodingArgs}`;
+      stream.streamUrl = this.getFfmpegPlexInput(
+        `${this.transcodeUrlBase}${this.transcodingArgs}`
+      );
     } else {
       //This case sounds complex. Apparently plex is sending us just the audio, so we would need to get the video in a separate stream.
       this.log('Decision: Direct stream. Audio is being transcoded');
       stream.separateVideoStream =
-        this.settings.streamPath === 'direct' ? this.file : this.plexFile;
-      stream.streamUrl = `${this.transcodeUrlBase}${this.transcodingArgs}`;
+        this.settings.streamPath === 'direct'
+          ? this.file
+          : this.getFfmpegPlexInput(this.plexFile);
+      stream.streamUrl = this.getFfmpegPlexInput(
+        `${this.transcodeUrlBase}${this.transcodingArgs}`
+      );
       this.directInfo = await this.getDirectInfo();
       this.videoIsDirect = true;
     }
@@ -147,15 +159,31 @@ class PlexTranscoder {
       ? await this.getAudioIndex()
       : 'a';
 
-    this.log(stream);
+    this.log(redactPlexTokens(stream));
 
     return stream;
+  }
+
+  getPlexHeaders(headers = { Accept: 'application/json' }) {
+    return {
+      ...headers,
+      'X-Plex-Token': this.server.accessToken,
+    };
+  }
+
+  getFfmpegPlexInput(url) {
+    return {
+      url,
+      headers: {
+        'X-Plex-Token': this.server.accessToken,
+      },
+    };
   }
 
   getHttpOptions(headers = { Accept: 'application/json' }) {
     return {
       allowlist: [this.server.uri],
-      headers,
+      headers: this.getPlexHeaders(headers),
     };
   }
 
@@ -237,11 +265,10 @@ X-Plex-Product=${this.product}&\
 X-Plex-Client-Platform=${profileName}&\
 X-Plex-Client-Profile-Name=${profileName}&\
 X-Plex-Device-Name=${this.deviceName}&\
-X-Plex-Device=${this.device}&\
-X-Plex-Client-Identifier=${this.clientIdentifier}&\
-X-Plex-Platform=${profileName}&\
-X-Plex-Token=${this.server.accessToken}&\
-X-Plex-Client-Profile-Extra=${clientProfile_enc}&\
+	X-Plex-Device=${this.device}&\
+	X-Plex-Client-Identifier=${this.clientIdentifier}&\
+	X-Plex-Platform=${profileName}&\
+	X-Plex-Client-Profile-Extra=${clientProfile_enc}&\
 protocol=${this.settings.streamProtocol}&\
 Connection=keep-alive&\
 hasMDE=${hasMDE}&\
@@ -371,9 +398,7 @@ lang=en`;
     let index = 'a';
 
     try {
-      const data = await this.plexGet(
-        `${this.server.uri}${this.key}?X-Plex-Token=${this.server.accessToken}`
-      );
+      const data = await this.plexGet(`${this.server.uri}${this.key}`);
       this.log(data);
       try {
         let streams = data.MediaContainer.Metadata[0].Media[0].Part[0].Stream;
@@ -408,22 +433,33 @@ lang=en`;
     this.log('Received transcode decision:');
     this.log(data);
 
-    // Print error message if transcode not possible
-    // TODO: handle failure better
-    if (data.MediaContainer.mdeDecisionCode === 1000) {
-      this.log("mde decision code 1000, so it's all right?");
-      return;
+    const mediaContainer = data && data.MediaContainer;
+    if (!mediaContainer) {
+      throw Error('Plex decision response did not include a MediaContainer');
     }
 
-    let transcodeDecisionCode = data.MediaContainer.transcodeDecisionCode;
+    const mdeDecisionCode = mediaContainer.mdeDecisionCode;
+    if (
+      typeof mdeDecisionCode !== 'undefined' &&
+      String(mdeDecisionCode) !== '1000'
+    ) {
+      const text =
+        mediaContainer.mdeDecisionText ||
+        mediaContainer.transcodeDecisionText ||
+        'Plex did not return a reason';
+      throw Error(`Plex MDE decision failed (${mdeDecisionCode}): ${text}`);
+    }
+
+    let transcodeDecisionCode = mediaContainer.transcodeDecisionCode;
     if (typeof transcodeDecisionCode === 'undefined') {
       this.decisionJson.MediaContainer.transcodeDecisionCode = 'novideo';
       this.log('Strange case, attempt direct play');
-    } else if (!(directPlay || transcodeDecisionCode == '1001')) {
-      this.log(
-        `IMPORTANT: Recieved transcode decision code ${transcodeDecisionCode}! Expected code 1001.`
+    } else if (!(directPlay || String(transcodeDecisionCode) === '1001')) {
+      const text =
+        mediaContainer.transcodeDecisionText || 'Plex did not return a reason';
+      throw Error(
+        `Plex transcode decision failed (${transcodeDecisionCode}): ${text}`
       );
-      this.log(`Error message: '${data.MediaContainer.transcodeDecisionText}'`);
     }
   }
 
@@ -436,7 +472,9 @@ lang=en`;
       let mediaContainer = data.MediaContainer;
       let metadata = getOneOrUndefined(mediaContainer, 'Metadata');
       if (typeof metadata !== 'undefined') {
-        this.albumArt.path = `${this.server.uri}${metadata.thumb}?X-Plex-Token=${this.server.accessToken}`;
+        this.albumArt.path = this.getFfmpegPlexInput(
+          `${this.server.uri}${metadata.thumb}`
+        );
 
         let media = getOneOrUndefined(metadata, 'Media');
         if (typeof media !== 'undefined') {
@@ -456,6 +494,7 @@ lang=en`;
       await this.getDecisionUnmanaged(directPlay);
     } catch (err) {
       console.error(err);
+      throw err;
     }
   }
 
@@ -476,11 +515,10 @@ X-Plex-Product=${this.product}&\
 X-Plex-Platform=${profileName}&\
 X-Plex-Client-Platform=${profileName}&\
 X-Plex-Client-Profile-Name=${profileName}&\
-X-Plex-Device-Name=${this.deviceName}&\
-X-Plex-Device=${this.device}&\
-X-Plex-Client-Identifier=${this.clientIdentifier}&\
-X-Plex-Platform=${profileName}&\
-X-Plex-Token=${this.server.accessToken}`;
+	X-Plex-Device-Name=${this.deviceName}&\
+	X-Plex-Device=${this.device}&\
+	X-Plex-Client-Identifier=${this.clientIdentifier}&\
+	X-Plex-Platform=${profileName}`;
 
     return statusUrl;
   }
@@ -547,6 +585,29 @@ function getOneOrUndefined(object, field) {
     return undefined;
   }
   return x[0];
+}
+
+function redactPlexTokens(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPlexTokens(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        if (key.toLowerCase() === 'x-plex-token') {
+          return [key, '[redacted]'];
+        }
+        return [key, redactPlexTokens(entry)];
+      })
+    );
+  }
+
+  if (typeof value === 'string') {
+    return value.replace(/X-Plex-Token=[^&\s'"]+/g, 'X-Plex-Token=[redacted]');
+  }
+
+  return value;
 }
 
 module.exports = PlexTranscoder;

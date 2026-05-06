@@ -1,4 +1,7 @@
 const { httpGet, httpPost } = require('./lib/http');
+const {
+  readOrCreatePlexClientIdentifier,
+} = require('./lib/plex-client-identifier');
 
 function appendQuery(url, query = {}) {
   const target = new URL(url);
@@ -42,13 +45,19 @@ class Plex {
       port: typeof opts.port !== 'undefined' ? opts.port : '32400',
       protocol: typeof opts.protocol !== 'undefined' ? opts.protocol : 'http',
     };
+    this._clientIdentifier = readOrCreatePlexClientIdentifier({
+      clientIdentifier: opts.clientIdentifier,
+      databaseDir: opts.databaseDir,
+      settingsCollection: opts.settingsCollection,
+      sqlite: opts.sqlite,
+    });
     this._headers = {
       Accept: 'application/json',
       'X-Plex-Device': 'dizqueTV',
       'X-Plex-Device-Name': 'dizqueTV',
       'X-Plex-Product': 'dizqueTV',
       'X-Plex-Version': '0.1',
-      'X-Plex-Client-Identifier': 'rg14zekk3pa5zp4safjwaa8z',
+      'X-Plex-Client-Identifier': this._clientIdentifier,
       'X-Plex-Platform': 'Chrome',
       'X-Plex-Platform-Version': '80.0',
     };
@@ -65,6 +74,10 @@ class Plex {
 
   get URL() {
     return `${this._server.uri}`;
+  }
+
+  get clientIdentifier() {
+    return this._clientIdentifier;
   }
 
   async SignIn(username, password) {
