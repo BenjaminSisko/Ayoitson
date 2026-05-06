@@ -13,7 +13,7 @@ function getInternalBaseUrl(req) {
     }
   }
 
-  if (!warnedAboutLocalhostFallback) {
+  if (shouldWarnAboutLocalhostFallback() && !warnedAboutLocalhostFallback) {
     warnedAboutLocalhostFallback = true;
     console.warn(
       'INTERNAL_URL is not set and no request host is available; falling back to localhost.'
@@ -25,6 +25,10 @@ function getInternalBaseUrl(req) {
 
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, '');
+}
+
+function shouldWarnAboutLocalhostFallback() {
+  return process.env.NODE_ENV !== 'production';
 }
 
 module.exports = {

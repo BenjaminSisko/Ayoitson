@@ -87,7 +87,7 @@ function createApiRouter() {
   );
 }
 
-function createUploadApp() {
+function createUploadApp(fileUploadOptions = {}) {
   const app = express();
   app.use(
     fileUpload({
@@ -98,6 +98,7 @@ function createUploadApp() {
       abortOnLimit: true,
       safeFileNames: true,
       preserveExtension: true,
+      ...fileUploadOptions,
     })
   );
   app.use(createApiRouter());
