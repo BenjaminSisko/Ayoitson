@@ -36,6 +36,7 @@ export type HdhrSettings = Record<string, unknown> & {
 };
 
 export type GuideLineup = Record<string, unknown>;
+type ChannelSummaryResponse = Array<ChannelSummary | number | string>;
 
 type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
   body?: unknown;
@@ -96,6 +97,23 @@ async function parseResponse(response: Response) {
   } catch {
     return { code: 'UNKNOWN', message: text };
   }
+}
+
+function normalizeChannelSummary(channel: ChannelSummary | number | string) {
+  if (typeof channel === 'number') {
+    return { number: channel };
+  }
+
+  if (typeof channel === 'string') {
+    const parsed = Number(channel);
+    return Number.isFinite(parsed) ? { number: parsed } : null;
+  }
+
+  if (typeof channel.number === 'number') {
+    return channel;
+  }
+
+  return null;
 }
 
 export const apiClient = {
@@ -178,7 +196,11 @@ export const apiClient = {
   },
 
   listChannels() {
-    return request<ChannelSummary[]>('/api/channels');
+    return request<ChannelSummaryResponse>('/api/channels').then((channels) =>
+      channels
+        .map((channel) => normalizeChannelSummary(channel))
+        .filter((channel): channel is ChannelSummary => Boolean(channel))
+    );
   },
 
   createChannel(channel: ChannelCreate) {

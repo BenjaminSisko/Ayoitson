@@ -37,14 +37,14 @@ const ayoButtonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-ayo-ink text-ayo-cream hover:bg-ayo-graphite-2 active:bg-ayo-graphite border border-transparent',
+          'ayo-button-primary hover:bg-ayo-graphite-2 active:bg-ayo-graphite border border-transparent',
         accent:
-          'bg-ayo-on-air text-text-on-accent hover:bg-ayo-on-air-dim active:bg-ayo-on-air-dim border border-transparent',
+          'ayo-button-accent hover:bg-ayo-on-air-dim active:bg-ayo-on-air-dim border border-transparent',
         secondary:
-          'bg-surface-1 text-text-primary border border-border-default hover:bg-surface-2',
+          'ayo-button-secondary border border-border-default hover:bg-surface-2',
         ghost:
-          'bg-transparent text-text-primary border border-border-default hover:bg-surface-1',
-        link: 'bg-transparent text-accent hover:text-accent-dim underline-offset-4 hover:underline border border-transparent',
+          'ayo-button-ghost border border-border-default hover:bg-surface-1',
+        link: 'ayo-button-link underline-offset-4 hover:underline border border-transparent',
       },
       size: {
         default: 'h-9 text-14 px-sp-4 py-sp-3',

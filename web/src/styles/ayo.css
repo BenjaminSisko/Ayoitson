@@ -8,6 +8,40 @@
  * ========================================================================== */
 
 /* ----------------------------------------------------------------------------
+ * <AyoButton> — color classes stay in CSS to avoid tailwind-merge confusing
+ * custom text-size tokens with custom text-color tokens.
+ * -------------------------------------------------------------------------- */
+
+.ayo-button-primary {
+  background: var(--ayo-ink);
+  color: var(--ayo-cream);
+}
+
+.ayo-button-accent {
+  background: var(--ayo-on-air);
+  color: var(--text-on-accent);
+}
+
+.ayo-button-secondary {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.ayo-button-ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.ayo-button-link {
+  background: transparent;
+  color: var(--accent);
+}
+
+.ayo-button-link:hover {
+  color: var(--accent-dim);
+}
+
+/* ----------------------------------------------------------------------------
  * <AyoLiveIndicator> — pulsing "On Air" pill
  *   1.5s loop, 4% opacity oscillation. Reduced-motion silences the pulse.
  * -------------------------------------------------------------------------- */

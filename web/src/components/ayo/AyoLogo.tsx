@@ -1,6 +1,8 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/cn';
+import logoTransparentUrl from '../../../public/logo-transparent.png?url';
+import logoUrl from '../../../public/logo.png?url';
 
 /**
  * <AyoLogo>
@@ -55,7 +57,7 @@ export function AyoLogo({
 }: AyoLogoProps) {
   // For 'light' we serve the cream-bg version; for 'dark' or 'auto' we serve
   // the transparent — surface beneath it provides the right background.
-  const src = mode === 'light' ? '/logo.png' : '/logo-transparent.png';
+  const src = mode === 'light' ? logoUrl : logoTransparentUrl;
   const altText =
     alt ?? (variant === 'icon-only' ? 'Ayoitson icon' : "Ayo! It's On");
   const sizeClass =

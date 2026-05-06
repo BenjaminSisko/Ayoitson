@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, Tv } from 'lucide-react';
+import { ArrowLeft, Plus, Radio, Search, Trash2, Tv } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -40,6 +40,12 @@ function displayNumber(channel: ChannelListItem | Channel) {
   return typeof channel.number === 'number'
     ? String(channel.number)
     : 'Unknown';
+}
+
+function paddedNumber(channel: ChannelListItem | Channel) {
+  return typeof channel.number === 'number'
+    ? String(channel.number).padStart(3, '0')
+    : '---';
 }
 
 function sortChannels(channels: ChannelSummary[]) {
@@ -113,36 +119,57 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
 
   return (
     <div className="grid gap-sp-5">
-      <div className="flex flex-col gap-sp-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="grid max-w-md flex-1 gap-sp-2">
-          <AyoLabel htmlFor="channel-search">Search channels</AyoLabel>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-sp-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
-              aria-hidden="true"
-            />
-            <AyoInput
-              id="channel-search"
-              className="pl-sp-7"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Channel number"
-            />
+      <AyoCard radius="tv">
+        <AyoCard.Body>
+          <div className="grid gap-sp-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+            <div className="min-w-0">
+              <p className="text-11 font-bold uppercase tracking-wide text-ayo-on-air">
+                Channel Board
+              </p>
+              <h2 className="mt-sp-1 text-display font-display text-text-primary">
+                Broadcast Inventory
+              </h2>
+              <div className="mt-sp-4 flex flex-wrap gap-sp-2">
+                <AyoBadge tone="neutral">
+                  {channels.data?.length ?? 0} total
+                </AyoBadge>
+                <AyoBadge tone="neutral">
+                  {filteredChannels.length} visible
+                </AyoBadge>
+                <AyoBadge tone="scheduled">v2 React</AyoBadge>
+              </div>
+            </div>
+            <div className="grid gap-sp-3">
+              <div className="grid gap-sp-2">
+                <AyoLabel htmlFor="channel-search">Search channels</AyoLabel>
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-sp-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+                    aria-hidden="true"
+                  />
+                  <AyoInput
+                    id="channel-search"
+                    className="pl-sp-7"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Channel number"
+                  />
+                </div>
+              </div>
+              <AyoButton variant="primary" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create channel
+              </AyoButton>
+            </div>
           </div>
-        </div>
-        <AyoButton variant="primary" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Create channel
-        </AyoButton>
-      </div>
+        </AyoCard.Body>
+      </AyoCard>
 
       <AyoCard>
         <AyoCard.Header>
           <div>
             <AyoCard.Title>Channels</AyoCard.Title>
-            <AyoCard.Description>
-              Linear channel inventory from the API.
-            </AyoCard.Description>
+            <AyoCard.Description>Live TV lineup.</AyoCard.Description>
           </div>
           {channels.isSuccess && (
             <AyoBadge tone="neutral">{channels.data.length} total</AyoBadge>
@@ -179,7 +206,7 @@ export function ChannelListView({ onNavigate }: { onNavigate?: Navigate }) {
               />
             )}
           {filteredChannels.length > 0 && (
-            <div className="grid gap-sp-2">
+            <div className="grid gap-sp-3">
               {filteredChannels.map((channel) => (
                 <ChannelRow
                   key={channel.number}
@@ -337,21 +364,39 @@ function ChannelRow({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-sp-3 rounded-2 border border-border-default bg-surface-page px-sp-4 py-sp-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="grid gap-sp-3 rounded-tv border border-border-default bg-surface-page p-sp-3 shadow-0 transition-shadow duration-fast ease-snap hover:shadow-1 sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-center">
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-sp-3 text-left focus:outline-none focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-[color:var(--ayo-focus-ring)] focus-visible:outline-offset-2"
+        className="grid h-20 place-items-center rounded-tv border border-border-subtle bg-surface-2 text-left focus:outline-none focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-[color:var(--ayo-focus-ring)] focus-visible:outline-offset-2"
+        onClick={onOpen}
+      >
+        <span className="text-center">
+          <span className="block text-11 font-bold uppercase tracking-wide text-ayo-on-air">
+            CH
+          </span>
+          <span className="block font-mono text-22 text-text-primary">
+            {paddedNumber(channel)}
+          </span>
+        </span>
+      </button>
+      <button
+        type="button"
+        className="flex min-w-0 items-center gap-sp-3 rounded-2 px-sp-2 py-sp-2 text-left transition-colors duration-fast ease-soft hover:bg-surface-1 focus:outline-none focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-[color:var(--ayo-focus-ring)] focus-visible:outline-offset-2"
         onClick={onOpen}
       >
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-tv bg-surface-2 text-ayo-on-air">
           <Tv className="h-5 w-5" aria-hidden="true" />
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-14 font-semibold text-text-primary">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-18 font-semibold text-text-primary">
             {displayName(channel)}
           </span>
-          <span className="mt-sp-1 block truncate font-mono text-12 text-text-muted">
-            Channel {displayNumber(channel)}
+          <span className="mt-sp-1 flex flex-wrap items-center gap-sp-2 text-12 text-text-muted">
+            <span className="font-mono">Channel {displayNumber(channel)}</span>
+            <span className="inline-flex items-center gap-sp-1">
+              <Radio className="h-3 w-3" aria-hidden="true" />
+              Ready
+            </span>
           </span>
         </span>
       </button>
