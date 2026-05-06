@@ -39,6 +39,7 @@ const healthModule = require('./health');
 const authModule = require('./auth');
 const uploadModule = require('./upload');
 const versionModule = require('./version');
+const legacyCompatModule = require('./legacy-compat');
 
 function passthrough(_req, _res, next) {
   return next();
@@ -64,6 +65,12 @@ function compose(deps, options = {}) {
   // First-run setup: gated internally by the route (returns 410 once a key
   // exists). No auth at the router seam.
   router.use('/api/auth', authModule.createRouter(deps));
+
+  // Temporary AngularJS UI compatibility aliases. Mounted before the redesigned
+  // resource routers so deprecated methods such as `PUT /api/plex-servers`
+  // can translate to the new service contract, while unhandled paths continue
+  // to the Phase 4 routers below.
+  router.use('/api', requireApiKey, legacyCompatModule.createRouter(deps));
 
   // Auth-gated resource routers. Each gets its own `requireApiKey` mount so a
   // future change can swap auth/scope/limits per resource without rewiring.
@@ -104,5 +111,6 @@ module.exports = {
     auth: authModule,
     upload: uploadModule,
     version: versionModule,
+    legacyCompat: legacyCompatModule,
   },
 };
