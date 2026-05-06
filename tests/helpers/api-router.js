@@ -1,6 +1,13 @@
+// tests/helpers/api-router.js
+// Test harness for the Phase 4 per-resource API. Builds an Express app with
+// the new `src/api/index.js` composition root mounted; mocks the dep bag.
+//
+// — Claude (Anthropic), Lane Alpha · 2026-05-06
+
 const express = require('express');
 const fileUpload = require('express-fileupload');
-const api = require('../../src/api');
+
+const apiCompose = require('../../src/api');
 
 function collection(rows = []) {
   return {
@@ -12,39 +19,58 @@ function collection(rows = []) {
   };
 }
 
-function createMockDependencies() {
-  const db = new Proxy(
+function createMockDependencies(overrides = {}) {
+  const defaultDb = new Proxy(
     {},
     {
       get: () => collection([{ _id: 'fixture', ffmpegPath: 'ffmpeg' }]),
     }
   );
 
+  const channels = new Map([
+    [
+      1,
+      {
+        number: 1,
+        name: 'Existing Channel',
+        programs: [],
+        fallback: [],
+      },
+    ],
+  ]);
+
   const channelService = {
-    getChannel: async () => ({ number: 1, name: 'Test Channel' }),
-    getAllChannels: async () => [],
-    getAllChannelNumbers: async () => [1],
-    saveChannel: async () => {},
-    deleteChannel: async () => {},
+    getChannel: async (number) => channels.get(number) || null,
+    getAllChannels: async () => Array.from(channels.values()),
+    getAllChannelNumbers: async () =>
+      Array.from(channels.keys()).map((n) => ({ number: n })),
+    saveChannel: async (number, channel) => {
+      channels.set(Number(number), channel);
+    },
+    deleteChannel: async (number) => {
+      channels.delete(Number(number));
+    },
   };
 
   const fillerDB = {
     getAllFillersInfo: async () => [],
     getFiller: async () => ({ id: 'fixture' }),
     saveFiller: async () => {},
+    createFiller: async () => 'fixture',
     deleteFiller: async () => {},
-    getChannelsUsingFiller: async () => [],
+    getFillerChannels: async () => [],
   };
 
   const customShowDB = {
     getAllShowsInfo: async () => [],
     getShow: async () => ({ id: 'fixture' }),
     saveShow: async () => {},
+    createShow: async () => 'fixture',
     deleteShow: async () => {},
   };
 
   return {
-    db,
+    db: defaultDb,
     channelService,
     fillerDB,
     customShowDB,
@@ -69,22 +95,20 @@ function createMockDependencies() {
       update: () => ({ ffmpeg: { ffmpegPath: 'ffmpeg' } }),
       reset: () => ({ ffmpegPath: 'ffmpeg' }),
     },
+    ...overrides,
   };
 }
 
-function createApiRouter() {
-  const deps = createMockDependencies();
-  return api.router(
-    deps.db,
-    deps.channelService,
-    deps.fillerDB,
-    deps.customShowDB,
-    deps.xmltvInterval,
-    deps.guideService,
-    deps.m3uService,
-    deps.eventService,
-    deps.ffmpegSettingsService
-  );
+function createApiRouter(overrides = {}) {
+  const deps = createMockDependencies(overrides);
+  return apiCompose.compose(deps);
+}
+
+function createApiApp(overrides = {}) {
+  const app = express();
+  app.use(express.json());
+  app.use(createApiRouter(overrides));
+  return app;
 }
 
 function createUploadApp(fileUploadOptions = {}) {
@@ -105,25 +129,56 @@ function createUploadApp(fileUploadOptions = {}) {
   return app;
 }
 
+// Walk the composed router and surface every leaf route as
+// {method, path}. Used by the auth-baseline test to probe every endpoint.
 function routeInventory(router) {
-  return router.stack
-    .filter((layer) => layer.route && layer.route.path.startsWith('/api/'))
-    .flatMap((layer) =>
-      Object.keys(layer.route.methods).map((method) => ({
-        method,
-        path: layer.route.path,
-        layer,
-      }))
-    );
+  const inventory = [];
+  function walk(stack, prefix) {
+    for (const layer of stack) {
+      if (layer.route && layer.route.path) {
+        // The new router mounts each per-resource sub-router under a path
+        // prefix; layer.route.path is the relative path inside that
+        // sub-router.
+        const fullPath = prefix + layer.route.path;
+        for (const method of Object.keys(layer.route.methods)) {
+          inventory.push({ method, path: fullPath, layer });
+        }
+      } else if (
+        layer.name === 'router' &&
+        layer.handle &&
+        layer.handle.stack
+      ) {
+        const subPrefix =
+          prefix +
+          (layer.regexp && layer.regexp.fast_slash
+            ? ''
+            : ((layer.regexp &&
+                layer.regexp.toString().match(/\^\\(\/[^\\?]+)/)) || [
+                '',
+                '',
+              ])[1].replace(/\\/g, ''));
+        walk(layer.handle.stack, subPrefix);
+      }
+    }
+  }
+  walk(router.stack, '');
+  return inventory.filter((r) => r.path.startsWith('/api/'));
 }
 
 function urlForRoute(routePath) {
-  return routePath.replace(/:number/g, '1').replace(/:id/g, 'fixture');
+  return routePath
+    .replace(/:number/g, '1')
+    .replace(/:id/g, 'fixture')
+    .replace(/:name/g, 'fixture');
 }
 
 function createAuthProbeApp() {
   const router = createApiRouter();
-  for (const route of routeInventory(router)) {
+  const routes = routeInventory(router);
+  // Replace each leaf handler with a 204 stub so the probe app doesn't depend
+  // on the real services succeeding — we're only interested in whether the
+  // auth gate fires before the handler does.
+  for (const route of routes) {
     const handlers = route.layer.route.stack;
     const lastHandler = handlers[handlers.length - 1];
     lastHandler.handle = (req, res) => {
@@ -135,14 +190,16 @@ function createAuthProbeApp() {
   app.use(express.json());
   app.use(router);
 
-  return {
-    app,
-    routes: routeInventory(router),
-  };
+  return { app, routes };
 }
 
 module.exports = {
+  apiCompose,
+  collection,
+  createApiApp,
+  createApiRouter,
   createAuthProbeApp,
+  createMockDependencies,
   createUploadApp,
   routeInventory,
   urlForRoute,

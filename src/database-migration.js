@@ -168,9 +168,24 @@ function commercialsRemover(db) {
                 } );
             }
         }
+        // Dedup the fillerContent list by program key. Closes BUG-TODO-DEDUP
+        // (was `//TODO: maybe remove duplicates?` left dangling from the
+        // original commercials migration). Programs themselves keep their
+        // ordering — only the auxiliary filler list is reduced because that's
+        // the list this migration is mutating; duplicate programs in
+        // `channel.programs` are a separate concern handled by channel-save
+        // validation, not here.
+        let dedupedFiller = [];
+        let seenFiller = {};
+        for (let f = 0; f < fixedFiller.length; f++) {
+            let key = getKey(fixedFiller[f]);
+            if (typeof(seenFiller[key]) === 'undefined') {
+                seenFiller[key] = true;
+                dedupedFiller.push(fixedFiller[f]);
+            }
+        }
         channel.programs = fixedPrograms;
-        channel.fillerContent = fixedFiller;
-        //TODO: maybe remove duplicates?
+        channel.fillerContent = dedupedFiller;
         if (addedFlex) {
             //fill up some flex settings just in case
             if ( typeof(channel.fillerRepeatCooldown) === 'undefined' ) {

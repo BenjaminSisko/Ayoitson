@@ -1,0 +1,966 @@
+openapi: 3.1.0
+info:
+  title: Ayoitson API
+  version: 1.0.0
+  description: |
+    The Ayoitson REST API. Phase 4 redesign — uniform POST/PUT/DELETE
+    semantics across every resource, structured error envelope on every
+    response, X-API-Key auth on every endpoint except `GET /api/health` and
+    `POST /api/auth/setup`. See `docs/SDLC.md` and the vault `[[API Redesign]]`
+    note for the design memo.
+  contact:
+    name: SALM LLC / Ayoitson
+servers:
+  - url: http://localhost:8000
+    description: Local development
+security:
+  - apiKey: []
+tags:
+  - name: channels
+  - name: plex-servers
+  - name: filler-lists
+  - name: custom-shows
+  - name: settings
+  - name: guide
+  - name: uploads
+  - name: auth
+  - name: health
+  - name: version
+
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: Public — no auth required. Suitable for monitoring and k8s probes.
+      security: []
+      responses:
+        '200':
+          description: Server is reachable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /api/version:
+    get:
+      tags: [version]
+      summary: Version info
+      description: Returns Ayoitson, ffmpeg, and node versions. Auth-required because it discloses dependency surface.
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Version' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '502': { $ref: '#/components/responses/UpstreamError' }
+
+  /api/auth/setup:
+    post:
+      tags: [auth]
+      summary: First-run setup
+      description: Creates the initial API key. Returns 409 once any active key exists.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        '201':
+          description: Master key created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedKey' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/channels:
+    get:
+      tags: [channels]
+      summary: List channels
+      responses:
+        '200':
+          description: Channel summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChannelSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [channels]
+      summary: Create channel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChannelCreate' }
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [number]
+                properties:
+                  number: { type: integer }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/channels/numbers:
+    get:
+      tags: [channels]
+      summary: List channel numbers
+      responses:
+        '200':
+          description: Sorted channel numbers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChannelSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/channels/{number}:
+    parameters:
+      - $ref: '#/components/parameters/ChannelNumber'
+    get:
+      tags: [channels]
+      summary: Read channel
+      parameters:
+        - name: programless
+          in: query
+          required: false
+          schema: { type: string, enum: ['true', 'false'] }
+          description: When `true`, omit the programs array from the response.
+      responses:
+        '200':
+          description: Channel object
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Channel' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [channels]
+      summary: Update channel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Channel' }
+      responses:
+        '200':
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [number]
+                properties:
+                  number: { type: integer }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [channels]
+      summary: Delete channel
+      responses:
+        '200':
+          description: Channel removed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteAck' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/channels/{number}/programs:
+    parameters:
+      - $ref: '#/components/parameters/ChannelNumber'
+    get:
+      tags: [channels]
+      summary: Stream channel programs
+      responses:
+        '200':
+          description: Streamed JSON array of programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/channels/{number}/description:
+    parameters:
+      - $ref: '#/components/parameters/ChannelNumber'
+    get:
+      tags: [channels]
+      summary: Channel descriptor
+      responses:
+        '200':
+          description: Minimal channel descriptor
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDescription' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/plex-servers:
+    get:
+      tags: [plex-servers]
+      summary: List Plex servers
+      description: Auth-required because the response discloses server identity / URL even with tokens redacted.
+      responses:
+        '200':
+          description: Plex server list (tokens redacted)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PlexServerPublic' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [plex-servers]
+      summary: Create Plex server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlexServerCreate' }
+      responses:
+        '201':
+          description: Plex server created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: boolean }
+                  name: { type: string }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/plex-servers/{name}:
+    parameters:
+      - $ref: '#/components/parameters/PlexServerName'
+    put:
+      tags: [plex-servers]
+      summary: Update Plex server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlexServerCreate' }
+      responses:
+        '200':
+          description: Plex server updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlexServerUpdateResult' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [plex-servers]
+      summary: Delete Plex server
+      responses:
+        '200':
+          description: Plex server deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteAck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/plex-servers/{name}/status-check:
+    parameters:
+      - $ref: '#/components/parameters/PlexServerName'
+    post:
+      tags: [plex-servers]
+      summary: Probe a configured Plex server
+      responses:
+        '200':
+          description: Probe result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlexStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/plex-servers/foreign-status-check:
+    post:
+      tags: [plex-servers]
+      summary: Probe an arbitrary Plex server (body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlexServerCreate' }
+      responses:
+        '200':
+          description: Probe result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlexStatus' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/filler-lists:
+    get:
+      tags: [filler-lists]
+      summary: List filler lists
+      responses:
+        '200':
+          description: Filler list summaries
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [filler-lists]
+      summary: Create filler list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '201':
+          description: Filler list created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/filler-lists/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [filler-lists]
+      summary: Read filler list
+      responses:
+        '200':
+          description: Filler list
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [filler-lists]
+      summary: Update filler list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Filler list updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated: { type: boolean }
+                  id: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [filler-lists]
+      summary: Delete filler list
+      responses:
+        '200':
+          description: Filler list deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteAck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/filler-lists/{id}/channels:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [filler-lists]
+      summary: Channels using this filler list
+      responses:
+        '200':
+          description: Channel list
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/custom-shows:
+    get:
+      tags: [custom-shows]
+      summary: List custom shows
+      responses:
+        '200':
+          description: Custom show summaries
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, additionalProperties: true } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [custom-shows]
+      summary: Create custom show
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '201':
+          description: Custom show created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/custom-shows/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [custom-shows]
+      summary: Read custom show
+      responses:
+        '200':
+          description: Custom show
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [custom-shows]
+      summary: Update custom show
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Custom show updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated: { type: boolean }
+                  id: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [custom-shows]
+      summary: Delete custom show
+      responses:
+        '200':
+          description: Custom show deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteAck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/settings/ffmpeg:
+    get:
+      tags: [settings]
+      summary: Read FFmpeg settings
+      responses:
+        '200':
+          description: FFmpeg settings
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [settings]
+      summary: Update FFmpeg settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated FFmpeg settings
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/settings/ffmpeg/reset:
+    post:
+      tags: [settings]
+      summary: Reset FFmpeg settings to defaults
+      responses:
+        '200':
+          description: Reset FFmpeg settings
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/settings/plex:
+    get:
+      tags: [settings]
+      summary: Read Plex settings
+      responses:
+        '200': { description: Plex settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [settings]
+      summary: Update Plex settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Updated Plex settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/settings/plex/reset:
+    post:
+      tags: [settings]
+      summary: Reset Plex settings to defaults
+      responses:
+        '200': { description: Reset Plex settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/settings/xmltv:
+    get:
+      tags: [settings]
+      summary: Read XMLTV settings
+      description: |
+        Note — the XMLTV file path is hard-coded server-side at `${DATABASE}/xmltv.xml`.
+        The `file` field is intentionally omitted from request and response shapes.
+        This closes F10-xmltv-readfile (operator-controllable arbitrary-file-read).
+      responses:
+        '200':
+          description: XMLTV settings (no `file` field)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/XmltvSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [settings]
+      summary: Update XMLTV settings
+      description: Bodies containing a `file` field are rejected with 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/XmltvSettings' }
+      responses:
+        '200':
+          description: Updated XMLTV settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/XmltvSettings' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/settings/xmltv/reset:
+    post:
+      tags: [settings]
+      summary: Reset XMLTV settings to defaults
+      responses:
+        '200':
+          description: Reset XMLTV settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/XmltvSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/settings/hdhr:
+    get:
+      tags: [settings]
+      summary: Read HDHR settings
+      responses:
+        '200': { description: HDHR settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [settings]
+      summary: Update HDHR settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Updated HDHR settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/settings/hdhr/reset:
+    post:
+      tags: [settings]
+      summary: Reset HDHR settings to defaults
+      responses:
+        '200': { description: Reset HDHR settings, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/guide/status:
+    get:
+      tags: [guide]
+      summary: TV guide status
+      responses:
+        '200': { description: Guide status, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/guide/debug:
+    get:
+      tags: [guide]
+      summary: Full guide dump (admin)
+      responses:
+        '200': { description: Full guide, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/guide/last-refresh:
+    get:
+      tags: [guide]
+      summary: Last refresh epoch ms
+      responses:
+        '200':
+          description: Last refresh time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/guide/channels/{number}:
+    parameters:
+      - $ref: '#/components/parameters/ChannelNumber'
+      - name: dateFrom
+        in: query
+        required: true
+        schema: { type: string, format: date-time }
+      - name: dateTo
+        in: query
+        required: true
+        schema: { type: string, format: date-time }
+    get:
+      tags: [guide]
+      summary: Channel guide lineup
+      responses:
+        '200':
+          description: Lineup
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/guide/xmltv.xml:
+    get:
+      tags: [guide]
+      summary: Serve xmltv.xml
+      responses:
+        '200':
+          description: XMLTV XML payload
+          content:
+            application/xml:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/guide/channels.m3u:
+    get:
+      tags: [guide]
+      summary: Serve channels.m3u
+      responses:
+        '200':
+          description: M3U text payload
+          content:
+            text/plain:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/guide/time-slots:
+    post:
+      tags: [guide]
+      summary: Time-slot tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [programs, schedule]
+              properties:
+                programs: { type: array, items: { type: object, additionalProperties: true } }
+                schedule: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Streamed time-slot result
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/guide/random-slots:
+    post:
+      tags: [guide]
+      summary: Random-slot tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [programs, schedule]
+              properties:
+                programs: { type: array, items: { type: object, additionalProperties: true } }
+                schedule: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Streamed random-slot result
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/uploads/image:
+    post:
+      tags: [uploads]
+      summary: Upload an image
+      description: |
+        Multipart form-data. File ≤ 10 MiB. Mime types accepted: image/png,
+        image/jpeg, image/gif, image/webp. Filename is sanitized; the on-disk
+        name is `{uuid}.{extension}` and the original filename is returned
+        only as metadata.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Image stored
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadResult' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Issued by the first-run setup flow (`scripts/first-run.js` or
+        `POST /api/auth/setup`). Format: `ayo_<base64url>`. Verified server-
+        side via argon2id against the `api_keys` SQLite table.
+  parameters:
+    ChannelNumber:
+      name: number
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PlexServerName:
+      name: name
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - PAYLOAD_TOO_LARGE
+            - RATE_LIMITED
+            - INTERNAL
+            - UPSTREAM_ERROR
+            - SERVICE_UNAVAILABLE
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok] }
+        version: { type: string }
+        uptime: { type: number, description: Process uptime in seconds }
+    Version:
+      type: object
+      properties:
+        ayoitson: { type: string }
+        dizquetv: { type: string, deprecated: true }
+        ffmpeg: { type: string }
+        nodejs: { type: string }
+    CreatedKey:
+      type: object
+      required: [metadata, rawKey]
+      properties:
+        metadata: { type: object, additionalProperties: true }
+        rawKey:
+          type: string
+          description: Raw API key value. Shown ONCE; never reissued.
+    ChannelSummary:
+      type: object
+      properties:
+        number: { type: integer }
+    Channel:
+      type: object
+      properties:
+        number: { type: integer }
+        name: { type: string }
+        icon: { type: string }
+        stealth: { type: boolean }
+        programs:
+          type: array
+          items: { type: object, additionalProperties: true }
+        fallback:
+          type: array
+          items: { type: object, additionalProperties: true }
+      additionalProperties: true
+    ChannelCreate:
+      allOf:
+        - $ref: '#/components/schemas/Channel'
+        - type: object
+          required: [number]
+    ChannelDescription:
+      type: object
+      required: [number]
+      properties:
+        number: { type: integer }
+        icon: { type: string }
+        name: { type: string }
+        stealth: { type: boolean }
+    PlexServerPublic:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        uri: { type: string }
+        index: { type: integer }
+        arGuide: { type: boolean }
+        arChannels: { type: boolean }
+    PlexServerCreate:
+      type: object
+      required: [name, uri, accessToken]
+      properties:
+        name: { type: string }
+        uri: { type: string }
+        accessToken: { type: string }
+        arGuide: { type: boolean }
+        arChannels: { type: boolean }
+    PlexServerUpdateResult:
+      type: object
+      properties:
+        updated: { type: boolean }
+        name: { type: string }
+        modifiedPrograms: { type: integer }
+        destroyedPrograms: { type: integer }
+    PlexStatus:
+      type: object
+      properties:
+        status: { type: integer }
+    XmltvSettings:
+      type: object
+      properties:
+        _id: { type: string }
+        cache: { type: integer }
+        refresh: { type: integer }
+        enableImageCache: { type: boolean }
+      additionalProperties: false
+    DeleteAck:
+      type: object
+      properties:
+        deleted: { type: boolean }
+        id: { type: string }
+        number: { type: integer }
+        name: { type: string }
+    UploadResult:
+      type: object
+      properties:
+        status: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            name: { type: string }
+            originalName: { type: string }
+            mimetype: { type: string }
+            size: { type: integer }
+            fileUrl: { type: string }
+  responses:
+    Unauthorized:
+      description: Missing or invalid X-API-Key
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Valid key, insufficient scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Resource exists or version mismatch
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request body or parameter is invalid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    PayloadTooLarge:
+      description: Body exceeds size limit
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    UpstreamError:
+      description: Upstream dependency failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ServiceUnavailable:
+      description: Server starting up or shutting down
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
