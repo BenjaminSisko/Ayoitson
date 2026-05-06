@@ -1,43 +1,22 @@
-# dizqueTV Baseline Fixture Placeholder
+# dizqueTV Baseline Fixture
 
-No real `.dizquetv/` data folder was available on this workstation during the Phase 1 Delta pass. This directory is therefore a placeholder that documents the fixture extraction shape required for the Phase 3 SQLite migration tests. It does not contain fabricated production data.
+This is a synthetic, sanitized `.dizquetv/` fixture for Phase 3 SQLite migration
+tests. No personal Plex library data or live tokens are included.
 
-When a real fixture is available, copy a sanitized snapshot into this directory with this shape:
+## Provenance
 
-```text
-tests/fixtures/dizquetv-baseline/
-  manifest.json
-  .dizquetv/
-    channels/
-      <channel-number>.json
-    filler/
-      <filler-id>.json
-    custom-shows/
-      <show-id>.json
-    play-cache/
-      <channel-number>/
-        <base64-program-key>.json
-    cache/
-      images/
-    images/
-    plex-servers.json
-    ffmpeg-settings.json
-    plex-settings.json
-    xmltv-settings.json
-    hdhr-settings.json
-    cache-images.json
-    db-version.json
-    client-id.json
-    settings.json
-```
+- Created: 2026-05-05
+- Source: hand-authored synthetic data based on the documented dizqueTV diskdb
+  shape from the Phase 1 placeholder manifest and the Phase 3 JSON schema notes.
+- Reason: no real `~/.dizquetv/` or backup folder was visible on this
+  workstation during Phase 3 pre-flight.
 
-Sanitization requirements:
+## Sanitization
 
-- Replace every Plex token with deterministic test-only values before committing.
-- Replace private hostnames, IP addresses, usernames, local paths, and media titles unless Benny explicitly marks the fixture safe to publish.
-- Preserve array/object shape, field names, durations, schedule settings, and cross-file references.
-- Record source path, extraction date, sanitization actions, file counts, and any intentionally omitted files in `manifest.json`.
-
-The Phase 3 migration test should fail clearly if `.dizquetv/` is still absent here.
+- Plex access token is the deterministic test-only value
+  `FIXTURE_TOKEN_REDACTED`.
+- Plex URI uses TEST-NET-3 address `http://203.0.113.10:32400`.
+- Media titles, local paths, channel names, and identifiers are synthetic.
+- Cross-file references are intentionally small but internally consistent.
 
 — Codex (OpenAI), Lane Delta · 2026-05-05

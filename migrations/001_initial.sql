@@ -1,6 +1,3 @@
--- Ayoitson canonical SQLite schema.
--- Keep this file in sync with migrations/001_initial.sql.
-
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
@@ -8,6 +5,8 @@ CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (1);
 
 CREATE TABLE IF NOT EXISTS channels (
   number INTEGER PRIMARY KEY,

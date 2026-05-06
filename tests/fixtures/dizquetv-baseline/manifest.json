@@ -1,62 +1,26 @@
 {
   "fixtureName": "dizquetv-baseline",
-  "status": "placeholder",
+  "status": "synthetic",
   "realFixtureAvailable": false,
   "createdBy": "Codex (OpenAI), Lane Delta",
   "createdDate": "2026-05-05",
-  "sourceSearch": {
-    "searchedRoots": ["/Users/benny"],
-    "excludedRoots": [
-      "/Users/benny/Library",
-      "/Users/benny/.Trash",
-      "/Users/benny/Movies"
-    ],
-    "maxDepth": 7,
-    "result": "No .dizquetv directory found"
-  },
-  "requiredShape": {
-    "root": ".dizquetv/",
-    "directories": [
-      "channels/",
-      "filler/",
-      "custom-shows/",
-      "play-cache/",
-      "cache/images/",
-      "images/"
-    ],
-    "collectionFiles": [
-      "plex-servers.json",
-      "ffmpeg-settings.json",
-      "plex-settings.json",
-      "xmltv-settings.json",
-      "hdhr-settings.json",
-      "cache-images.json",
-      "db-version.json",
-      "client-id.json",
-      "settings.json"
-    ],
-    "channelFiles": "channels/<channel-number>.json",
-    "fillerFiles": "filler/<filler-id>.json",
-    "customShowFiles": "custom-shows/<show-id>.json",
-    "playTimeFiles": "play-cache/<channel-number>/<base64-program-key>.json"
-  },
-  "sanitizationRequired": [
-    "Replace Plex access tokens with deterministic test-only values",
-    "Remove private hostnames, IP addresses, usernames, and local filesystem paths",
-    "Replace private media titles while preserving program durations and schedule shape",
-    "Keep cross-file identifiers internally consistent"
+  "source": "Hand-authored synthetic fixture because no real ~/.dizquetv/ or backup was visible during Phase 3 pre-flight.",
+  "sanitization": [
+    "No personal Plex data used",
+    "Plex token replaced with FIXTURE_TOKEN_REDACTED",
+    "Plex URI uses TEST-NET-3 address 203.0.113.10",
+    "Media titles and local paths are synthetic"
   ],
   "counts": {
-    "channels": 0,
-    "fillerLists": 0,
-    "customShows": 0,
-    "plexServers": 0,
-    "playTimeEntries": 0,
-    "cacheImageRows": 0
+    "channels": 1,
+    "programs": 1,
+    "fillerLists": 1,
+    "fillerPrograms": 1,
+    "customShows": 1,
+    "customShowPrograms": 1,
+    "plexServers": 1,
+    "playTimeEntries": 1,
+    "cacheImageRows": 1
   },
-  "notes": [
-    "Placeholder only. Do not treat as migration input.",
-    "Phase 3 migration tests should require a real sanitized .dizquetv/ subtree."
-  ],
   "signature": "Codex (OpenAI), Lane Delta · 2026-05-05"
 }
