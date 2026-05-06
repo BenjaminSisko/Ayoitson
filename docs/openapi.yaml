@@ -309,6 +309,30 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/plex-servers/status:
+    post:
+      tags: [plex-servers]
+      summary: Legacy Plex status helper
+      deprecated: true
+      description: Legacy compatibility route. Prefer `POST /api/plex-servers/{name}/status-check`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        '200':
+          description: Probe result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlexStatus' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/filler-lists:
     get:
       tags: [filler-lists]
