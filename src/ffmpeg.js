@@ -3,7 +3,11 @@ const events = require('events')
 const { getInternalBaseUrl } = require('./lib/url')
 
 const MAXIMUM_ERROR_DURATION_MS = 60000;
-const REALLY_RIDICULOUSLY_HIGH_FPS_FOR_DIZQUETVS_USECASE = 120;
+const REALLY_RIDICULOUSLY_HIGH_FPS_FOR_AYOITSON_USECASE = 120;
+
+function getDatabaseDir() {
+    return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
 
 class FFMPEG extends events.EventEmitter {
     constructor(opts, channel) {
@@ -20,7 +24,7 @@ class FFMPEG extends events.EventEmitter {
             this.opts.errorScreen = 'kill';
             this.opts.normalizeResolution = false;
             this.opts.audioVolumePercent = 100;
-            this.opts.maxFPS = REALLY_RIDICULOUSLY_HIGH_FPS_FOR_DIZQUETVS_USECASE;
+            this.opts.maxFPS = REALLY_RIDICULOUSLY_HIGH_FPS_FOR_AYOITSON_USECASE;
         }
         this.channel = channel
         this.ffmpegPath = opts.ffmpegPath
@@ -272,7 +276,8 @@ class FFMPEG extends events.EventEmitter {
                     );
                     inputFiles++;
 
-                    videoComplex = `;drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=${sz1}:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='${streamUrl.errorTitle}',drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=${sz2}:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+${sz3})/2:text='${streamUrl.subtitle}'[videoy];[videoy]realtime[videox]`;
+                    const fontPath = `${getDatabaseDir()}/font.ttf`;
+                    videoComplex = `;drawtext=fontfile=${fontPath}:fontsize=${sz1}:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='${streamUrl.errorTitle}',drawtext=fontfile=${fontPath}:fontsize=${sz2}:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+${sz3})/2:text='${streamUrl.subtitle}'[videoy];[videoy]realtime[videox]`;
                 } else { //blank
                     ffmpegArgs.push(
                         '-f', 'lavfi',
@@ -554,7 +559,7 @@ class FFMPEG extends events.EventEmitter {
         }
 
         ffmpegArgs.push(`-metadata`,
-                        `service_provider="dizqueTV"`,
+                        `service_provider="Ayoitson"`,
                         `-metadata`,
                         `service_name="${this.channel.name}"`,
                         );

@@ -1,4 +1,4 @@
-module.exports = function (dizquetv) {
+module.exports = function (ayoitson) {
     return {
         restrict: 'E',
         templateUrl: 'templates/xmltv-settings.html',
@@ -6,16 +6,16 @@ module.exports = function (dizquetv) {
         scope: {
         },
         link: function (scope, element, attrs) {
-            dizquetv.getXmltvSettings().then((settings) => {
+            ayoitson.getXmltvSettings().then((settings) => {
                 scope.settings = settings
             })
             scope.updateSettings = (settings) => {
-                dizquetv.updateXmltvSettings(settings).then((_settings) => {
+                ayoitson.updateXmltvSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }
             scope.resetSettings = (settings) => {
-                dizquetv.resetXmltvSettings(settings).then((_settings) => {
+                ayoitson.resetXmltvSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }

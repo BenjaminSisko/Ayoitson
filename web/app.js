@@ -33,7 +33,7 @@ require('ng-i18next');
 var app = angular.module('myApp', ['ngRoute', 'vs-repeat', 'angularLazyImg', 'dndLists', 'luegg.directives', 'jm.i18next'])
 
 app.service('plex',             require('./services/plex'))
-app.service('dizquetv',         require('./services/dizquetv'))
+app.service('ayoitson',         require('./services/ayoitson'))
 app.service('resolutionOptions', require('./services/resolution-options'))
 app.service('getShowData', require('./services/get-show-data'))
 app.service('commonProgramTools', require('./services/common-program-tools'))

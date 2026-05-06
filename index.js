@@ -39,7 +39,7 @@ const onShutdown = require("node-graceful-shutdown").onShutdown;
 
 console.log(
 `         \\
-   dizqueTV ${constants.VERSION_NAME}
+   Ayoitson ${constants.VERSION_NAME}
 .------------.
 |:::///### o |
 |:::///###   |
@@ -50,65 +50,69 @@ console.log(
 const NODE = parseInt( process.version.match(/^[^0-9]*(\d+)\..*$/)[1] );
 
 if (NODE < 12) {
-    console.error(`WARNING: Your nodejs version ${process.version} is lower than supported. dizqueTV has been tested best on nodejs 12.16.`);
+    console.error(`WARNING: Your nodejs version ${process.version} is lower than supported. Ayoitson has been tested best on nodejs 12.16.`);
 }
 
 let unlockPath = false;
+let cliDatabaseDir;
 for (let i = 0, l = process.argv.length; i < l; i++) {
     if ((process.argv[i] === "-p" || process.argv[i] === "--port") && i + 1 !== l)
         process.env.PORT = process.argv[i + 1]
     if ((process.argv[i] === "-d" || process.argv[i] === "--database") && i + 1 !== l)
-        process.env.DATABASE = process.argv[i + 1]
+        cliDatabaseDir = process.argv[i + 1]
 
     if (process.argv[i] === "--unlock") {
         unlockPath = true;
     }
 }
 
-const requestedDatabaseDir = process.env.DATABASE;
+const deprecatedDatabaseDir = process.env.DATABASE;
+if (deprecatedDatabaseDir && !process.env.AYOITSON_DATABASE && !cliDatabaseDir) {
+    console.warn('WARNING: DATABASE is deprecated; use AYOITSON_DATABASE. DATABASE will be removed after one compatibility release.');
+}
 const runtimeDirs = resolveRuntimeDataDirs({
     databaseDir:
+        cliDatabaseDir ||
         process.env.AYOITSON_DATABASE ||
-        requestedDatabaseDir ||
+        deprecatedDatabaseDir ||
         path.join(".", ".ayoitson"),
     legacyDir:
-        process.env.DIZQUETV_LEGACY_DATABASE ||
-        (requestedDatabaseDir ? undefined : path.join(".", ".dizquetv")),
+        process.env.AYOITSON_LEGACY_DATABASE ||
+        (cliDatabaseDir || deprecatedDatabaseDir ? undefined : path.join(".", ".dizquetv")),
 });
+process.env.AYOITSON_DATABASE = runtimeDirs.databaseDir;
 process.env.DATABASE = runtimeDirs.databaseDir;
 process.env.PORT = process.env.PORT || 8000
+const databaseDir = process.env.AYOITSON_DATABASE;
 
-if (!fs.existsSync(process.env.DATABASE)) {
-    if (fs.existsSync(  path.join(".", ".pseudotv")  )) {
-        throw Error(process.env.DATABASE + " folder not found but ./.pseudotv has been found. Please rename this folder or create an empty " + process.env.DATABASE + " folder so that the program is not confused about.");
-    }
-    fs.mkdirSync(process.env.DATABASE)
+if (!fs.existsSync(databaseDir)) {
+    fs.mkdirSync(databaseDir)
 }
 
-if(!fs.existsSync(path.join(process.env.DATABASE, 'images'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'images'))
+if(!fs.existsSync(path.join(databaseDir, 'images'))) {
+    fs.mkdirSync(path.join(databaseDir, 'images'))
 }
-if(!fs.existsSync(path.join(process.env.DATABASE, 'channels'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'channels'))
+if(!fs.existsSync(path.join(databaseDir, 'channels'))) {
+    fs.mkdirSync(path.join(databaseDir, 'channels'))
 }
-if(!fs.existsSync(path.join(process.env.DATABASE, 'filler'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'filler'))
+if(!fs.existsSync(path.join(databaseDir, 'filler'))) {
+    fs.mkdirSync(path.join(databaseDir, 'filler'))
 }
-if(!fs.existsSync(path.join(process.env.DATABASE, 'custom-shows'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'custom-shows'))
+if(!fs.existsSync(path.join(databaseDir, 'custom-shows'))) {
+    fs.mkdirSync(path.join(databaseDir, 'custom-shows'))
 }
-if(!fs.existsSync(path.join(process.env.DATABASE, 'cache'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'cache'))
+if(!fs.existsSync(path.join(databaseDir, 'cache'))) {
+    fs.mkdirSync(path.join(databaseDir, 'cache'))
 }
-if(!fs.existsSync(path.join(process.env.DATABASE, 'cache','images'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'cache','images'))
+if(!fs.existsSync(path.join(databaseDir, 'cache','images'))) {
+    fs.mkdirSync(path.join(databaseDir, 'cache','images'))
 }
 
 
 let fontAwesome = "fontawesome-free-5.15.4-web";
 let bootstrap = "bootstrap-4.4.1-dist";
 let db = createRuntimeDatabase({
-    databaseDir: process.env.DATABASE,
+    databaseDir,
     legacyDir: runtimeDirs.legacyDir,
     archiveLegacy: process.env.AYOITSON_ARCHIVE_LEGACY === '1',
 });
@@ -134,7 +138,7 @@ async function initializeProgramPlayTimeDB() {
 }
 initializeProgramPlayTimeDB();
 
-fileCache = new FileCacheService( path.join(process.env.DATABASE, 'cache') );
+fileCache = new FileCacheService( path.join(databaseDir, 'cache') );
 cacheImageService = new CacheImageService(db, fileCache);
 m3uService = new M3uService(fileCache, channelService)
 
@@ -299,21 +303,21 @@ app.get('/version.js', (req, res) => {
     ` );
     res.end();
 });
-app.use('/images', express.static(path.join(process.env.DATABASE, 'images')))
+app.use('/images', express.static(path.join(databaseDir, 'images')))
 app.use(express.static(path.join(__dirname, 'web','public')))
-app.use('/images', express.static(path.join(process.env.DATABASE, 'images')))
+app.use('/images', express.static(path.join(databaseDir, 'images')))
 app.use('/cache/images', cacheImageService.routerInterceptor())
-app.use('/cache/images', express.static(path.join(process.env.DATABASE, 'cache','images')))
+app.use('/cache/images', express.static(path.join(databaseDir, 'cache','images')))
 app.use('/favicon.svg', express.static(
     path.join(__dirname, 'resources','favicon.svg')
 ) );
-app.use('/custom.css', express.static(path.join(process.env.DATABASE, 'custom.css')))
+app.use('/custom.css', express.static(path.join(databaseDir, 'custom.css')))
 
 // API Routers
 app.use(api.router(db, channelService, fillerDB, customShowDB, xmltvInterval, guideService, m3uService, eventService, ffmpegSettingsService))
 app.use('/api/cache/images', cacheImageService.apiRouters())
-app.use('/' + fontAwesome, express.static(path.join(process.env.DATABASE, fontAwesome)))
-app.use('/' + bootstrap, express.static(path.join(process.env.DATABASE, bootstrap)))
+app.use('/' + fontAwesome, express.static(path.join(databaseDir, fontAwesome)))
+app.use('/' + bootstrap, express.static(path.join(databaseDir, bootstrap)))
 
 app.use(video.router( channelService, fillerDB, db, programmingService, activeChannelService, programPlayTimeDB  ))
 app.use(hdhr.router)
@@ -326,55 +330,51 @@ app.listen(process.env.PORT, () => {
 
 function initDB(db, channelDB) {
     //TODO: this is getting so repetitive, do it better
-    if (!fs.existsSync(process.env.DATABASE + '/images/dizquetv.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/dizquetv.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data)
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'ayoitson.png'))) {
+        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/ayoitson.png')))
+        fs.writeFileSync(path.join(databaseDir, 'images', 'ayoitson.png'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/font.ttf')) {
+    if (!fs.existsSync(path.join(databaseDir, 'font.ttf'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/font.ttf')))
-        fs.writeFileSync(process.env.DATABASE + '/font.ttf', data)
+        fs.writeFileSync(path.join(databaseDir, 'font.ttf'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/images/dizquetv.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/dizquetv.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-error-screen.png')) {
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'generic-error-screen.png'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-error-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-error-screen.png', data)
+        fs.writeFileSync(path.join(databaseDir, 'images', 'generic-error-screen.png'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-offline-screen.png')) {
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'generic-offline-screen.png'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-offline-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-offline-screen.png', data)
+        fs.writeFileSync(path.join(databaseDir, 'images', 'generic-offline-screen.png'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-music-screen.png')) {
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'generic-music-screen.png'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-music-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-music-screen.png', data)
+        fs.writeFileSync(path.join(databaseDir, 'images', 'generic-music-screen.png'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/images/loading-screen.png')) {
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'loading-screen.png'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/loading-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/loading-screen.png', data)
+        fs.writeFileSync(path.join(databaseDir, 'images', 'loading-screen.png'), data)
     }
-    if (!fs.existsSync(process.env.DATABASE + '/images/black.png')) {
+    if (!fs.existsSync(path.join(databaseDir, 'images', 'black.png'))) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/black.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/black.png', data)
+        fs.writeFileSync(path.join(databaseDir, 'images', 'black.png'), data)
     }
-    if (!fs.existsSync( path.join(process.env.DATABASE, 'custom.css') )) {
+    if (!fs.existsSync( path.join(databaseDir, 'custom.css') )) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources', 'default-custom.css')))
-        fs.writeFileSync( path.join(process.env.DATABASE, 'custom.css'), data)
+        fs.writeFileSync( path.join(databaseDir, 'custom.css'), data)
     }
-    if (!fs.existsSync( path.join(process.env.DATABASE, fontAwesome) )) {
+    if (!fs.existsSync( path.join(databaseDir, fontAwesome) )) {
 
         let sourceZip = path.resolve(__dirname, 'resources', fontAwesome) + ".zip";
-        let destinationPath = path.resolve(process.env.DATABASE);
+        let destinationPath = path.resolve(databaseDir);
 
         fs.createReadStream(sourceZip)
             .pipe(unzip.Extract({ path: destinationPath }));
 
     }
-    if (!fs.existsSync( path.join(process.env.DATABASE, bootstrap) )) {
+    if (!fs.existsSync( path.join(databaseDir, bootstrap) )) {
 
         let sourceZip = path.resolve(__dirname, 'resources', bootstrap) + ".zip";
-        let destinationPath = path.resolve(process.env.DATABASE);
+        let destinationPath = path.resolve(databaseDir);
 
         fs.createReadStream(sourceZip)
             .pipe(unzip.Extract({ path: destinationPath }));

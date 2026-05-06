@@ -51,7 +51,7 @@ function writePromise(json, xmlSettings, throttle, cacheImageService) {
 function _writeDocStart(xw) {
     xw.startDocument()
     xw.startElement('tv')
-    xw.writeAttribute('generator-info-name', 'dizquetv')
+    xw.writeAttribute('generator-info-name', 'ayoitson')
 }
 function _writeDocEnd(xw, ws) {
     xw.endElement()
@@ -170,4 +170,3 @@ async function shutdown() {
         console.log("xmltv writer had no pending jobs.");
     }
 }
-

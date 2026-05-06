@@ -1,5 +1,5 @@
 
-module.exports = function ($timeout, dizquetv, getShowData) {
+module.exports = function ($timeout, ayoitson, getShowData) {
     const MINUTE = 60*1000;
     const HOUR = 60*MINUTE;
     const DAY = 24*HOUR;
@@ -185,7 +185,7 @@ module.exports = function ($timeout, dizquetv, getShowData) {
 
             let doIt = async(fromInstant) => {
                 let t0 = new Date().getTime();
-                let res = await dizquetv.calculateRandomSlots(scope.programs, scope.schedule  );
+                let res = await ayoitson.calculateRandomSlots(scope.programs, scope.schedule  );
                 let t1 = new Date().getTime();
 
                 let w = Math.max(0, 250 - (t1 - t0) );

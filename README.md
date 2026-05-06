@@ -1,89 +1,50 @@
-# dizqueTV 1.5.5
-![Discord](https://img.shields.io/discord/711313431457693727?logo=discord&logoColor=fff&style=flat-square) ![GitHub top language](https://img.shields.io/github/languages/top/vexorian/dizquetv?logo=github&style=flat-square) ![Docker Pulls](https://img.shields.io/docker/pulls/vexorian/dizquetv?logo=docker&logoColor=fff&style=flat-square)
+# Ayoitson 1.5.5
 
 Create live TV channel streams from media on your Plex servers.
 
-**dizqueTV** ( *dis·keˈtiːˈvi* )  is a fork of the project previously-known as [pseudotv-plex](https://gitlab.com/DEFENDORe/pseudotv-plex) or [pseudotv](https://github.com/DEFENDORe/pseudotv). New repository because of lack of activity from the main repository and the name change is because projects with the old name already existed and were created long before this approach and it was causing confusion. You can migrate from pseudoTV 0.0.51 to dizqueTV by renaming the .pseudotv folder to .dizquetv and running the new executable (or doing a similar trick with the volumes used by the docker containers).
-
-<img src="https://raw.githubusercontent.com/vexorian/dizquetv/main/resources/dizquetv.png" width="200">
-
-Configure your channels, programs, commercials and settings using the dizqueTV web UI.
-
-Access your channels by adding the spoofed dizqueTV HDHomerun tuner to Plex, Jellyfin or emby or utilize the M3U Url with any 3rd party IPTV player app.
-
-EPG (Guide Information) data is stored to `.dizquetv/xmltv.xml`
+Ayoitson lets you build custom linear channels, publish them through an HDHomeRun-compatible tuner, and expose M3U/XMLTV outputs for IPTV clients. Fresh installs store runtime data in `.ayoitson/`, including the SQLite database and generated `xmltv.xml`.
 
 ## Features
-- A wide variety of options for the clients where you can play the TV channels, since it both spoofs a HDHR tuner and a IPTV channel list.
-- Ease of setup for xteve and Plex playback by mocking a HDHR server.
-- Configure your channels once, and play them just the same in any of the other devices.
-- Customize your channels and what they play. Make them display their logo while they play. Play filler content (&quot;commercials&quot;, music videos, prerolls, channel branding videos) at specific times to pad time.
-- Docker image and prepackage binaries for Windows, Linux and Mac.
-- Supports nvidia for hardware encoding, including in docker.
-- Select media (desired programs and commercials) across multiple Plex servers
-- Includes a WEB TV Guide where you can even play channels in your desktop by using your local media player.
-- Subtitle support.
-- Auto deinterlace any Plex media not marked `"scanType": "progressive"`
-- Can be configured to completely force Direct play, if you are ready for the caveats.
-- It's up to you if the channels have a life of their own and act as if they continued playing when you weren't watching them or if you want "on-demand" channels that stop their schedules while not being watched.
+
+- Configure channels, programs, filler content, logos, playback behavior, and guide settings from the web UI.
+- Play channels through Plex, Jellyfin, Emby, or third-party IPTV players.
+- Mock an HDHomeRun tuner for DVR-style discovery while keeping the required Silicondust compatibility fields.
+- Use media across multiple Plex servers.
+- Generate M3U and XMLTV outputs for external clients.
+- Optionally transcode with FFmpeg, normalize audio/video, and support Nvidia hardware encoding in Docker.
+- Build packaged binaries for Windows, Linux, and macOS.
+
+## Runtime Data
+
+Ayoitson uses `.ayoitson/` by default. Set `AYOITSON_DATABASE=/path/to/data` to use a different data folder. The older `DATABASE` environment variable still works for one compatibility release and emits a deprecation warning.
+
+The `--database` CLI flag remains supported and has the highest priority for a single launch.
 
 ## Limitations
 
-- If you want to play the TV channels in Plex using the spoofed HDHR, Plex pass is required.
-- dizqueTV does not currently watch your Plex server for media updates/changes. You must manually remove and re-add your programs for any changes to take effect. Same goes for Plex server changes (changing IP, port, etc).. You&apos;ll have to update the server settings manually in that case.
-- Most players (including Plex) will break after switching episodes if video / audio format is too different. dizqueTV can  be configured to use ffmpeg transcoding to prevent this, but that costs resources.
-- If you configure Plex DVR, it will always be recording and transcoding the channel&apos;s contents.
-- In its current state, dizquetv is intended for private use only and you should be discouraged from running dizqueTV in any capacity where other users can have access to dizqueTV's ports. You can use Plex's iptv player feature to share dizqueTV streams or you'll have to come up with some work arounds to make sure that streams can be played without ever actually exposing the dizquetv port to the outside world. Please use it with care, consider exposing dizqueTV's ports as something only advanced users who know what they are doing should try.
-
-## Releases
-
-- https://github.com/vexorian/dizquetv/releases
-
-## Wiki
-
-- For setup instructions, check [the wiki](https://github.com/vexorian/dizquetv/wiki)
-
-
-## App Preview
-<img src="https://raw.githubusercontent.com/vexorian/dizquetv/main/docs/channels.png" width="500">
-<br/>
-<img src="https://raw.githubusercontent.com/vexorian/dizquetv/main/docs/channel-config.png" width="500">
-<br/>
-<img src="https://raw.githubusercontent.com/vexorian/dizquetv/main/docs/plex-guide.png" width="500">
-<br/>
-<img src="https://raw.githubusercontent.com/vexorian/dizquetv/main/docs/plex-stream.png" width="500">
+- Plex DVR playback through the spoofed HDHomeRun tuner requires Plex Pass.
+- Ayoitson does not watch Plex libraries for media updates. Re-add affected programs after Plex media or server settings change.
+- Large video/audio format changes between episodes can break some players unless FFmpeg transcoding is enabled.
+- If Plex DVR is configured, Plex may continuously record or transcode channel content.
+- Ayoitson is intended for private network use. Do not expose its ports directly to untrusted users or the public internet.
 
 ## Development
-Building/Packaging Binaries: (uses `browserify`, `babel` and `pkg`)
-```
+
+```sh
 npm run build
 npm run compile
 npm run package
 ```
 
-Live Development: (using `nodemon` and `watchify`)
-```
+```sh
 npm run dev-client
 npm run dev-server
 ```
 
-## Contribute
+## License And Attribution
 
-* Pull requests welcome but please read the [Code of Conduct](CODE_OF_CONDUCT.md) and the [Pull Request Template](pull_request_template.md) first.
-* Tip Jar: https://buymeacoffee.com/vexorian
-
-## License
-
- * Original pseudotv-Plex code was released under [MIT license (c) 2020 Dan Ferguson](https://github.com/DEFENDORe/pseudotv/blob/665e71e24ee5e93d9c9c90545addb53fdc235ff6/LICENSE)
- * dizqueTV's improvements are released under zlib license (c) 2020 Victor Hugo Soliz Kuncar
- * FontAwesome: [https://fontawesome.com/license/free](https://archive.fo/PRqis)
- * Bootstrap: https://github.com/twbs/bootstrap/blob/v4.4.1/LICENSE
-
-## Thanks
-
- * DEFENDORe , George and everyone that worked on PseudoTV
- * Ahmed Said Al-Busaidi , for reporting exploits in advance before publishing in exploit-db.
- * Nathan for working on automation addons.
- * Timebomb, Rafael for the contributions during dizqueTV's active days.
- 
- 
+- Ayoitson is a fork of [dizqueTV](https://github.com/vexorian/dizquetv) by Victor Hugo Soliz Kuncar.
+- Original pseudotv-Plex code was released under [MIT license (c) 2020 Dan Ferguson](https://github.com/DEFENDORe/pseudotv/blob/665e71e24ee5e93d9c9c90545addb53fdc235ff6/LICENSE).
+- dizqueTV's improvements are released under zlib license (c) 2020 Victor Hugo Soliz Kuncar.
+- FontAwesome: [https://fontawesome.com/license/free](https://archive.fo/PRqis)
+- Bootstrap: https://github.com/twbs/bootstrap/blob/v4.4.1/LICENSE

@@ -1,9 +1,9 @@
 #!/bin/sh
 MODE=${1:-all}
-WIN64=dizquetv-win-x64.exe
-WIN32=dizquetv-win-x86.exe
-MACOSX=dizquetv-macos-x64
-LINUX64=${LINUXBUILD:-dizquetv-linux-x64}
+WIN64=ayoitson-win-x64.exe
+WIN32=ayoitson-win-x86.exe
+MACOSX=ayoitson-macos-x64
+LINUX64=${LINUXBUILD:-ayoitson-linux-x64}
 
 rm -R ./dist/*
 npm run build || exit 1
@@ -31,4 +31,3 @@ if [ "$MODE" == "all" ]; then
     echo dist/$MACOSX
     echo dist/$WIN32
 fi
-

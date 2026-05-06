@@ -9,6 +9,7 @@ const PlexServerDB = require('./dao/plex-server-db');
 const Plex = require("./plex.js");
 const { v4: uuidv4 } = require('uuid');
 const { getInternalBaseUrl } = require('./lib/url');
+const { getOrCreateClientIdentifier } = require('./lib/client-identifier');
 
 const timeSlotsService = require('./services/time-slots-service');
 const randomSlotsService = require('./services/random-slots-service');
@@ -45,6 +46,10 @@ function toPublicPlexServer(server) {
   return publicServer;
 }
 
+function getDatabaseDir() {
+  return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
+
 module.exports = { router: api }
 function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideService, _m3uService, eventService, ffmpegSettingsService ) {
     let m3uService = _m3uService;
@@ -56,7 +61,8 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
         let ffmpegSettings = db['ffmpeg-settings'].find()[0];
         let v = await (new FFMPEGInfo(ffmpegSettings)).getVersion();
         res.send( {
-            "dizquetv" : constants.VERSION_NAME,
+            "name" : constants.APP_NAME,
+            "version" : constants.VERSION_NAME,
             "ffmpeg" : v,
             "nodejs" : process.version,
         } );
@@ -85,7 +91,10 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
         if (servers.length != 1) {
             return res.status(404).send(req.t("api.plex_server_not_found"));
         }
-        let plex = new Plex(servers[0]);
+        let plex = new Plex({
+          ...servers[0],
+          clientIdentifier: getOrCreateClientIdentifier(db),
+        });
         let s = await Promise.race( [
             (async() => {
                 return await plex.checkServerStatus();
@@ -105,7 +114,10 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
     router.post("/api/plex-servers/foreignstatus", async (req, res) => {
       try {
         let server = req.body;
-        let plex = new Plex(server);
+        let plex = new Plex({
+          ...server,
+          clientIdentifier: getOrCreateClientIdentifier(db),
+        });
         let s = await Promise.race( [
             (async() => {
                 return await plex.checkServerStatus();
@@ -397,7 +409,7 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
             }
 
             const storedName = createStoredUploadName(originalName);
-            const uploadDir = path.join(process.env.DATABASE, 'images', 'uploads');
+            const uploadDir = path.join(getDatabaseDir(), 'images', 'uploads');
 
             fs.mkdirSync(uploadDir, { recursive: true });
             await logo.mv(path.join(uploadDir, storedName));
@@ -827,7 +839,7 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
             _id: req.body._id,
             cache: 12,
             refresh: 4,
-            file: process.env.DATABASE + '/xmltv.xml'
+            file: path.join(getDatabaseDir(), 'xmltv.xml')
         })
         var xmltv = db['xmltv-settings'].find()[0]
         res.send(xmltv)

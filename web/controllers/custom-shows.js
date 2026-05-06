@@ -1,4 +1,4 @@
-module.exports = function ($scope, $timeout, dizquetv) {
+module.exports = function ($scope, $timeout, ayoitson) {
     $scope.showss = []
     $scope.showShowConfig = false
     $scope.selectedShow = null
@@ -7,7 +7,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
     $scope.refreshShow = async () => {
         $scope.shows = [ { id: '?', pending: true} ]
         $timeout();
-        let shows = await dizquetv.getAllShowsInfo();
+        let shows = await ayoitson.getAllShowsInfo();
         shows.sort( (a,b) => {
             return a.name > b.name;
         } );
@@ -31,7 +31,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
     }
 
     $scope.queryChannel = async (index, channel) => {
-        let ch = await dizquetv.getChannelDescription(channel.number);
+        let ch = await ayoitson.getChannelDescription(channel.number);
         ch.pending = false;
         $scope.shows[index] = ch;
         $scope.$apply();
@@ -44,10 +44,10 @@ module.exports = function ($scope, $timeout, dizquetv) {
         if (typeof show !== 'undefined') {
             // not canceled
             if ($scope.selectedChannelIndex == -1) { // add new channel
-                await dizquetv.createShow(show);
+                await ayoitson.createShow(show);
             } else {
                 $scope.shows[ $scope.selectedChannelIndex ].pending = true;
-                await dizquetv.updateShow(show.id, show);
+                await ayoitson.updateShow(show.id, show);
             }
             await $scope.refreshShow();
         }
@@ -62,7 +62,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
                 feedToShowConfig();
             } else {
                 $scope.shows[index].pending = true;
-                let f = await dizquetv.getShow($scope.shows[index].id);
+                let f = await ayoitson.getShow($scope.shows[index].id);
                 feedToShowConfig(f);
                 $timeout();
             }
@@ -79,7 +79,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
             let show = $scope.shows[index];
             if (confirm("Are you sure to delete show: " + show.name + "? This will NOT delete the show's programs from channels that are using.")) {
                 show.pending = true;
-                await dizquetv.deleteShow(show.id);
+                await ayoitson.deleteShow(show.id);
                 $timeout();
                 await $scope.refreshShow();
                 $timeout();

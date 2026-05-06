@@ -1,4 +1,4 @@
-module.exports = function (dizquetv, $timeout) {
+module.exports = function (ayoitson, $timeout) {
     return {
         restrict: 'E',
         templateUrl: 'templates/plex-server-edit.html',
@@ -16,7 +16,7 @@ module.exports = function (dizquetv, $timeout) {
             scope.onSave = async () => {
                 try {
                     scope.loading = { show: true };
-                    await dizquetv.updatePlexServer(scope.state.server);
+                    await ayoitson.updatePlexServer(scope.state.server);
                     scope.state.modified = false;
                     scope.state.success = "The server was updated.";
                     scope.state.changesSaved = true;
@@ -33,7 +33,7 @@ module.exports = function (dizquetv, $timeout) {
 
             scope.onDelete = async () => {
                 try {
-                    let channelReport = await dizquetv.removePlexServer(scope.state.server.name);
+                    let channelReport = await ayoitson.removePlexServer(scope.state.server.name);
                     scope.state.channelReport = channelReport;
                     channelReport.sort( (a,b) => {
                         if (a.destroyedPrograms != b.destroyedPrograms) {

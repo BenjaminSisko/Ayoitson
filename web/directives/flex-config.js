@@ -1,4 +1,4 @@
-module.exports = function ($timeout, dizquetv) {
+module.exports = function ($timeout, ayoitson) {
     return {
         restrict: 'E',
         templateUrl: 'templates/flex-config.html',

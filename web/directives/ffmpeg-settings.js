@@ -1,4 +1,4 @@
-module.exports = function (dizquetv, resolutionOptions) {
+module.exports = function (ayoitson, resolutionOptions) {
     return {
         restrict: 'E',
         templateUrl: 'templates/ffmpeg-settings.html',
@@ -7,12 +7,12 @@ module.exports = function (dizquetv, resolutionOptions) {
         },
         link: function (scope, element, attrs) {
             //add validations to ffmpeg settings, speciall commas in codec name
-            dizquetv.getFfmpegSettings().then((settings) => {
+            ayoitson.getFfmpegSettings().then((settings) => {
                 scope.settings = settings
             })
             scope.updateSettings = (settings) => {
                 delete scope.settingsError;
-                dizquetv.updateFfmpegSettings(settings).then((_settings) => {
+                ayoitson.updateFfmpegSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 }).catch( (err) => {
                     if ( typeof(err.data) === "string") {
@@ -21,7 +21,7 @@ module.exports = function (dizquetv, resolutionOptions) {
                 })
             }
             scope.resetSettings = (settings) => {
-                dizquetv.resetFfmpegSettings(settings).then((_settings) => {
+                ayoitson.resetFfmpegSettings(settings).then((_settings) => {
                     scope.settings = _settings
                 })
             }

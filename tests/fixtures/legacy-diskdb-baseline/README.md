@@ -1,4 +1,4 @@
-# dizqueTV Baseline Fixture
+# Legacy DiskDB Baseline Fixture
 
 This is a synthetic, sanitized `.dizquetv/` fixture for Phase 3 SQLite migration
 tests. No personal Plex library data or live tokens are included.
@@ -6,7 +6,7 @@ tests. No personal Plex library data or live tokens are included.
 ## Provenance
 
 - Created: 2026-05-05
-- Source: hand-authored synthetic data based on the documented dizqueTV diskdb
+- Source: hand-authored synthetic data based on the documented legacy diskdb
   shape from the Phase 1 placeholder manifest and the Phase 3 JSON schema notes.
 - Reason: no real `~/.dizquetv/` or backup folder was visible on this
   workstation during Phase 3 pre-flight.

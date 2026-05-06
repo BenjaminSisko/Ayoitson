@@ -57,7 +57,7 @@ class CacheImageService {
    * Routers exported to use on express.use() function.
    * Use on api routers, like `{host}/api/cache/images`
    *
-   * `DELETE /` - Clear all files on .dizquetv/cache/images
+   * `DELETE /` - Clear all files on .ayoitson/cache/images
    *
    * @returns {Router}
    * @memberof CacheImageService
@@ -123,7 +123,7 @@ class CacheImageService {
   }
 
   /**
-   * Clear all files on .dizquetv/cache/images
+   * Clear all files on .ayoitson/cache/images
    *
    * @returns {promise}
    * @memberof CacheImageService

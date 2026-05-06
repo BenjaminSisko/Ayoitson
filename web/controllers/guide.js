@@ -1,6 +1,6 @@
 const MINUTE = 60 * 1000;
 
-module.exports = function ($scope, $timeout, dizquetv) {
+module.exports = function ($scope, $timeout, ayoitson) {
 
     $scope.offset = 0;
     $scope.M = 60 * MINUTE;
@@ -129,7 +129,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
             }
             $scope.applyLater();
             console.log("getting status...");
-            let status = await dizquetv.getGuideStatus();
+            let status = await ayoitson.getGuideStatus();
             $scope.lastUpdate = new Date(status.lastUpdate).getTime();
             console.log("got status: " + JSON.stringify(status) );
             $scope.channelNumbers = status.channelNumbers;
@@ -233,7 +233,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
         console.log(`number=${number}` );
         let d0 = new Date($scope.t0);
         let d1 = new Date($scope.t0 + $scope.T);
-        let lineup = await dizquetv.getChannelLineup(number, d0, d1);
+        let lineup = await ayoitson.getChannelLineup(number, d0, d1);
         let ch = {
             icon : lineup.icon,
             number : lineup.number,
@@ -348,7 +348,7 @@ module.exports = function ($scope, $timeout, dizquetv) {
     $scope.checkUpdates = async () => {
         try {
             console.log("get status " + new Date() );
-            let status = await dizquetv.getGuideStatus();
+            let status = await ayoitson.getGuideStatus();
             let t = new Date(status.lastUpdate).getTime();
             if ( t > $scope.lastUpdate) {
                 $scope.refreshManaged();

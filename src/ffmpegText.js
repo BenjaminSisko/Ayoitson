@@ -1,5 +1,9 @@
 const spawn = require('child_process').spawn
 const events = require('events')
+
+function getDatabaseDir() {
+    return process.env.AYOITSON_DATABASE || process.env.DATABASE || '.ayoitson';
+}
 const fs = require('fs')
 const path = require('path')
 
@@ -14,7 +18,7 @@ class FFMPEG_TEXT extends events.EventEmitter {
             '-i', `color=c=black:s=${opts.videoResolution}`,
             '-f', 'lavfi',
             '-i', 'anullsrc',
-            '-vf', `drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=30:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='${title}',drawtext=fontfile=${process.env.DATABASE}/font.ttf:fontsize=20:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+20)/2:text='${subtitle}'`,
+            '-vf', `drawtext=fontfile=${getDatabaseDir()}/font.ttf:fontsize=30:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='${title}',drawtext=fontfile=${getDatabaseDir()}/font.ttf:fontsize=20:fontcolor=white:x=(w-text_w)/2:y=(h+text_h+20)/2:text='${subtitle}'`,
             '-c:v', opts.videoEncoder,
             '-c:a', opts.audioEncoder,
             '-f', 'mpegts',

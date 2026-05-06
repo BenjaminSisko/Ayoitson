@@ -17,7 +17,9 @@ const {
 const {
   migrateDiskdbToSqlite,
 } = require('../../scripts/migrate-diskdb-to-sqlite');
+const { createClientIdentifier } = require('../lib/client-identifier');
 
+// Historical migration input. Fresh runtime data lives in .ayoitson.
 const LEGACY_DATA_DIR = '.dizquetv';
 const CURRENT_DB_VERSION = 805;
 const SETTINGS_COLLECTIONS = [
@@ -90,7 +92,7 @@ function resolveRuntimeDataDirs(options = {}) {
       DEFAULT_DATA_DIR,
     legacyDir:
       options.legacyDir ||
-      process.env.DIZQUETV_LEGACY_DATABASE ||
+      process.env.AYOITSON_LEGACY_DATABASE ||
       LEGACY_DATA_DIR,
   };
 }
@@ -135,10 +137,7 @@ function ensureRuntimeDefaults(runtimeDb, options = {}) {
     version: CURRENT_DB_VERSION,
   });
   ensureSingleton(runtimeDb['client-id'], {
-    clientId:
-      uuidv4().replace(/-/g, '').slice(0, 16) +
-      '-org-dizquetv-' +
-      process.platform,
+    clientId: createClientIdentifier(),
   });
 }
 

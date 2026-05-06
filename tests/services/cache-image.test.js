@@ -24,19 +24,24 @@ function createService(tempRoot, update = vi.fn()) {
 }
 
 describe('Phase 2 cache-image HTTP wrapper migration', () => {
+  let previousAyoitsonDatabase;
   let previousDatabase;
   let previousFetch;
   let tempRoot;
 
   beforeEach(() => {
+    previousAyoitsonDatabase = process.env.AYOITSON_DATABASE;
     previousDatabase = process.env.DATABASE;
     previousFetch = global.fetch;
+    delete process.env.AYOITSON_DATABASE;
+    delete process.env.DATABASE;
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ayoitson-cache-'));
     fs.mkdirSync(path.join(tempRoot, 'images'), { recursive: true });
   });
 
   afterEach(() => {
-    process.env.DATABASE = previousDatabase;
+    restoreEnv('AYOITSON_DATABASE', previousAyoitsonDatabase);
+    restoreEnv('DATABASE', previousDatabase);
     global.fetch = previousFetch;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
@@ -60,7 +65,7 @@ describe('Phase 2 cache-image HTTP wrapper migration', () => {
   });
 
   test('stores allowlisted Plex images through the HTTP wrapper', async () => {
-    process.env.DATABASE = tempRoot;
+    process.env.AYOITSON_DATABASE = tempRoot;
     fs.writeFileSync(
       path.join(tempRoot, 'plex-servers.json'),
       JSON.stringify([{ name: 'plex', uri: 'http://93.184.216.34:32400' }])
@@ -89,3 +94,11 @@ describe('Phase 2 cache-image HTTP wrapper migration', () => {
     ).toBe('image-bytes');
   });
 });
+
+function restoreEnv(name, value) {
+  if (typeof value === 'undefined') {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
+}

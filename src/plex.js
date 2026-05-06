@@ -1,4 +1,6 @@
 const { httpGet, httpPost } = require('./lib/http');
+const constants = require('./constants');
+const { getProcessClientIdentifier } = require('./lib/client-identifier');
 
 function appendQuery(url, query = {}) {
   const target = new URL(url);
@@ -44,11 +46,12 @@ class Plex {
     };
     this._headers = {
       Accept: 'application/json',
-      'X-Plex-Device': 'dizqueTV',
-      'X-Plex-Device-Name': 'dizqueTV',
-      'X-Plex-Product': 'dizqueTV',
+      'X-Plex-Device': constants.APP_NAME,
+      'X-Plex-Device-Name': constants.APP_NAME,
+      'X-Plex-Product': constants.APP_NAME,
       'X-Plex-Version': '0.1',
-      'X-Plex-Client-Identifier': 'rg14zekk3pa5zp4safjwaa8z',
+      'X-Plex-Client-Identifier':
+        opts.clientIdentifier || opts.clientId || getProcessClientIdentifier(),
       'X-Plex-Platform': 'Chrome',
       'X-Plex-Platform-Version': '80.0',
     };

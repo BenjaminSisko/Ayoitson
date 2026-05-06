@@ -1,5 +1,5 @@
 
-module.exports = function ($timeout, dizquetv, getShowData ) {
+module.exports = function ($timeout, ayoitson, getShowData ) {
     const DAY = 24*60*60*1000;
     const WEEK = 7 * DAY;
     const WEEK_DAYS = [ "Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday" ];
@@ -212,7 +212,7 @@ module.exports = function ($timeout, dizquetv, getShowData ) {
             let doIt = async(fromInstant) => {
                 scope.schedule.timeZoneOffset =  (new Date()).getTimezoneOffset();
                 let t0 = new Date().getTime();
-                let res = await dizquetv.calculateTimeSlots(scope.programs, scope.schedule  );
+                let res = await ayoitson.calculateTimeSlots(scope.programs, scope.schedule  );
                 let t1 = new Date().getTime();
 
                 let w = Math.max(0, 250 - (t1 - t0) );

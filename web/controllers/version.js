@@ -1,8 +1,8 @@
-module.exports = function ($scope, dizquetv) {
+module.exports = function ($scope, ayoitson) {
     $scope.version = ""
     $scope.ffmpegVersion = ""
-    dizquetv.getVersion().then((version) => {
-        $scope.version = version.dizquetv;
+    ayoitson.getVersion().then((version) => {
+        $scope.version = version.version;
         $scope.ffmpegVersion = version.ffmpeg;
         $scope.nodejs = version.nodejs;
     })
