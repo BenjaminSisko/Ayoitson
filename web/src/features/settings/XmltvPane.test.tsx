@@ -29,8 +29,10 @@ describe('XmltvPane', () => {
     });
     mockedApi.getXmltvOutputLocation.mockResolvedValue({
       file: '/Users/benny/Documents/New project 5/Ayoitson/.ayoitson/xmltv.xml',
-      xmltvUrl: 'http://127.0.0.1:8000/xmltv.xml',
-      m3uUrl: 'http://127.0.0.1:8000/channels.m3u',
+      xmltvUrl: 'http://192.168.1.103:8000/xmltv.xml',
+      m3uUrl: 'http://192.168.1.103:8000/channels.m3u',
+      localXmltvUrl: 'http://127.0.0.1:8000/xmltv.xml',
+      localM3uUrl: 'http://127.0.0.1:8000/channels.m3u',
     });
     mockedApi.updateXmltvSettings.mockImplementation(
       async (settings) => settings
@@ -46,6 +48,12 @@ describe('XmltvPane', () => {
       screen.getByText(
         '/Users/benny/Documents/New project 5/Ayoitson/.ayoitson/xmltv.xml'
       )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('http://192.168.1.103:8000/xmltv.xml')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('http://192.168.1.103:8000/channels.m3u')
     ).toBeInTheDocument();
     expect(
       screen.getByText('http://127.0.0.1:8000/xmltv.xml')

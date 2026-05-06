@@ -68,6 +68,8 @@ export type XmltvOutputLocation = {
   file?: string;
   xmltvUrl?: string;
   m3uUrl?: string;
+  localXmltvUrl?: string;
+  localM3uUrl?: string;
 };
 type ChannelSummaryResponse = Array<ChannelSummary | number | string>;
 

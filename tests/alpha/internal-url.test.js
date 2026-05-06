@@ -105,4 +105,25 @@ describe('getInternalBaseUrl', () => {
     expect(getInternalBaseUrl()).toBe('http://localhost:8000');
     expect(warnings).toHaveLength(1);
   });
+
+  test('rewrites loopback base URLs to a provider host', () => {
+    const { replaceLoopbackBaseUrls } = loadUrlHelper();
+
+    expect(
+      replaceLoopbackBaseUrls(
+        [
+          'http://127.0.0.1:8000/video?channel=1',
+          'http://localhost:8000/images/ayoitson.png',
+          'http://192.168.1.5:8000/video?channel=2',
+        ].join('\n'),
+        'http://provider.example:8000/'
+      )
+    ).toBe(
+      [
+        'http://provider.example:8000/video?channel=1',
+        'http://provider.example:8000/images/ayoitson.png',
+        'http://192.168.1.5:8000/video?channel=2',
+      ].join('\n')
+    );
+  });
 });

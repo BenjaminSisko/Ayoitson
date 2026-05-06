@@ -21,7 +21,7 @@ const PlexServerDB = require('../dao/plex-server-db');
 const throttle = require('../services/throttle');
 const timeSlotsService = require('../services/time-slots-service');
 const randomSlotsService = require('../services/random-slots-service');
-const { getInternalBaseUrl } = require('../lib/url');
+const { getInternalBaseUrl, getProviderBaseUrl } = require('../lib/url');
 const uploadModule = require('./upload');
 const { apiError, VALIDATION_ERROR, NOT_FOUND } = require('../lib/errors');
 const {
@@ -89,11 +89,14 @@ function recordId(record) {
 
 function legacyXmltv(record, req) {
   const host = req ? getInternalBaseUrl(req) : getInternalBaseUrl();
+  const providerHost = req ? getProviderBaseUrl(req) : host;
   return {
     ...(record || {}),
     file: resolveXmltvPath(),
-    xmltvUrl: `${host}/xmltv.xml`,
-    m3uUrl: `${host}/channels.m3u`,
+    xmltvUrl: `${providerHost}/xmltv.xml`,
+    m3uUrl: `${providerHost}/channels.m3u`,
+    localXmltvUrl: `${host}/xmltv.xml`,
+    localM3uUrl: `${host}/channels.m3u`,
   };
 }
 

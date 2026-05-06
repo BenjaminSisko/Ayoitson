@@ -1,3 +1,5 @@
+const { replaceLoopbackBaseUrls } = require('../lib/url');
+
 /**
  * Manager and Generate M3U content
  *
@@ -80,7 +82,7 @@ class M3uService {
    * @memberof M3uService
    */
   replaceHostOnM3u(host, data) {
-    return data.replace(/\{\{host\}\}/g, host);
+    return replaceLoopbackBaseUrls(data.replace(/\{\{host\}\}/g, host), host);
   }
 
   /**

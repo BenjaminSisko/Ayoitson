@@ -120,6 +120,8 @@ export function XmltvPane() {
       : 'Server-managed xmltv.xml');
   const providerXmltvUrl = outputLocation.data?.xmltvUrl || epgUrl;
   const providerM3uUrl = outputLocation.data?.m3uUrl;
+  const localXmltvUrl = outputLocation.data?.localXmltvUrl;
+  const localM3uUrl = outputLocation.data?.localM3uUrl;
 
   return (
     <AyoCard>
@@ -157,12 +159,28 @@ export function XmltvPane() {
                 value={providerXmltvUrl}
                 onCopy={() => copyValue('XMLTV URL', providerXmltvUrl)}
               />
+              {localXmltvUrl && localXmltvUrl !== providerXmltvUrl && (
+                <ReadOnlyLocationField
+                  id="xmltv-local-url"
+                  label="Local XMLTV URL"
+                  value={localXmltvUrl}
+                  onCopy={() => copyValue('local XMLTV URL', localXmltvUrl)}
+                />
+              )}
               {providerM3uUrl && (
                 <ReadOnlyLocationField
                   id="xmltv-m3u-url"
                   label="M3U playlist URL"
                   value={providerM3uUrl}
                   onCopy={() => copyValue('M3U URL', providerM3uUrl)}
+                />
+              )}
+              {localM3uUrl && localM3uUrl !== providerM3uUrl && (
+                <ReadOnlyLocationField
+                  id="xmltv-local-m3u-url"
+                  label="Local M3U URL"
+                  value={localM3uUrl}
+                  onCopy={() => copyValue('local M3U URL', localM3uUrl)}
                 />
               )}
               {copied && <AyoBadge tone="success">Copied {copied}.</AyoBadge>}

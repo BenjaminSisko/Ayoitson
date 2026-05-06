@@ -12,7 +12,7 @@ const fs = require('fs');
 const express = require('express');
 
 const { apiError, NOT_FOUND } = require('../lib/errors');
-const { getInternalBaseUrl } = require('../lib/url');
+const { getProviderBaseUrl, replaceLoopbackBaseUrls } = require('../lib/url');
 const { asyncRoute, resolveXmltvPath } = require('./_helpers');
 
 function createRouter(deps) {
@@ -37,10 +37,14 @@ function createRouter(deps) {
         throw err;
       }
 
-      const host = getInternalBaseUrl(req);
+      const host = getProviderBaseUrl(req);
+      const fileFinal = replaceLoopbackBaseUrls(
+        fileContent.replace(/\{\{host\}\}/g, host),
+        host
+      );
       res.set('Cache-Control', 'no-store');
       res.type('application/xml');
-      res.send(fileContent.replace(/\{\{host\}\}/g, host));
+      res.send(fileFinal);
     })
   );
 
@@ -51,7 +55,7 @@ function createRouter(deps) {
         return apiError(res, 'INTERNAL', 'm3u service unavailable');
       }
 
-      const host = getInternalBaseUrl(req);
+      const host = getProviderBaseUrl(req);
       const data = await m3uService.getChannelList(host);
       res.type('text');
       res.send(data);
