@@ -61,6 +61,21 @@ class FillerDAO {
   }
 
   async deleteFiller(id) {
+    const channels = await this.getFillerChannels(id);
+    await Promise.all(
+      channels.map(async (channelRef) => {
+        console.log(
+          `Updating channel ${channelRef.number} , remove filler: ${id}`
+        );
+        const channel = await this.channelService.getChannel(
+          channelRef.number
+        );
+        channel.fillerCollections = (channel.fillerCollections || []).filter(
+          (collection) => collection.id !== id
+        );
+        await this.channelService.saveChannel(channelRef.number, channel);
+      })
+    );
     this.db.prepare('DELETE FROM filler_lists WHERE id = ?').run(id);
   }
 
@@ -85,6 +100,49 @@ class FillerDAO {
       name: filler.name,
       count: filler.content.length,
     }));
+  }
+
+  async getFillerChannels(id) {
+    const numbers = await this.channelService.getAllChannelNumbers();
+    const channels = [];
+
+    await Promise.all(
+      numbers.map(async (number) => {
+        const channel = await this.channelService.getChannel(number);
+        const collections = channel.fillerCollections || [];
+        if (collections.some((collection) => collection.id === id)) {
+          channels.push({
+            number,
+            name: channel.name,
+          });
+        }
+      })
+    );
+
+    return channels;
+  }
+
+  async getFillersFromChannel(channel) {
+    const collections = channel.fillerCollections || [];
+    return Promise.all(
+      collections.map(async (fillerEntry) => {
+        let content = [];
+        try {
+          const filler = await this.getFiller(fillerEntry.id);
+          content = filler.content;
+        } catch (err) {
+          console.error(
+            `Channel #${channel.number} - ${channel.name} references an unattainable filler id: ${fillerEntry.id}`
+          );
+        }
+        return {
+          id: fillerEntry.id,
+          content,
+          weight: fillerEntry.weight,
+          cooldown: fillerEntry.cooldown,
+        };
+      })
+    );
   }
 }
 

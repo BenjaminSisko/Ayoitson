@@ -1,5 +1,4 @@
 
-const db = require('diskdb')
 const fs = require('fs')
 const unzip = require('unzipper')
 const path = require('path')
@@ -11,7 +10,6 @@ const i18nextMiddleware = require('i18next-http-middleware/cjs');
 const i18nextBackend = require('i18next-fs-backend/cjs');
 
 const api = require('./src/api')
-const dbMigration = require('./src/database-migration');
 const video = require('./src/video')
 const HDHR = require('./src/hdhr')
 const FileCacheService = require('./src/services/file-cache-service');
@@ -21,17 +19,21 @@ const ChannelService = require("./src/services/channel-service");
 const xmltv = require('./src/xmltv')
 const Plex = require('./src/plex');
 const constants = require('./src/constants')
-const ChannelDB = require("./src/dao/channel-db");
+const ChannelDAO = require("./src/dao/channel-dao");
 const M3uService = require("./src/services/m3u-service");
-const FillerDB = require("./src/dao/filler-db");
-const CustomShowDB = require("./src/dao/custom-show-db");
+const FillerDAO = require("./src/dao/filler-dao");
+const CustomShowDAO = require("./src/dao/custom-show-dao");
 const TVGuideService = require("./src/services/tv-guide-service");
 const EventService = require("./src/services/event-service");
 const OnDemandService = require("./src/services/on-demand-service");
 const ProgrammingService = require("./src/services/programming-service");
 const ActiveChannelService = require('./src/services/active-channel-service')
-const ProgramPlayTimeDB = require('./src/dao/program-play-time-db')
+const PlayTimeDAO = require('./src/dao/play-time-dao')
 const FfmpegSettingsService = require('./src/services/ffmpeg-settings-service')
+const {
+    createRuntimeDatabase,
+    resolveRuntimeDataDirs,
+} = require('./src/storage/sqlite-runtime')
 
 const onShutdown = require("node-graceful-shutdown").onShutdown;
 
@@ -63,7 +65,17 @@ for (let i = 0, l = process.argv.length; i < l; i++) {
     }
 }
 
-process.env.DATABASE = process.env.DATABASE ||  path.join(".", ".dizquetv")
+const requestedDatabaseDir = process.env.DATABASE;
+const runtimeDirs = resolveRuntimeDataDirs({
+    databaseDir:
+        process.env.AYOITSON_DATABASE ||
+        requestedDatabaseDir ||
+        path.join(".", ".ayoitson"),
+    legacyDir:
+        process.env.DIZQUETV_LEGACY_DATABASE ||
+        (requestedDatabaseDir ? undefined : path.join(".", ".dizquetv")),
+});
+process.env.DATABASE = runtimeDirs.databaseDir;
 process.env.PORT = process.env.PORT || 8000
 
 if (!fs.existsSync(process.env.DATABASE)) {
@@ -93,19 +105,21 @@ if(!fs.existsSync(path.join(process.env.DATABASE, 'cache','images'))) {
 }
 
 
-channelDB = new ChannelDB( path.join(process.env.DATABASE, 'channels') );
-
-db.connect(process.env.DATABASE, ['channels', 'plex-servers', 'ffmpeg-settings', 'plex-settings', 'xmltv-settings', 'hdhr-settings', 'db-version', 'client-id', 'cache-images', 'settings'])
-
 let fontAwesome = "fontawesome-free-5.15.4-web";
 let bootstrap = "bootstrap-4.4.1-dist";
+let db = createRuntimeDatabase({
+    databaseDir: process.env.DATABASE,
+    legacyDir: runtimeDirs.legacyDir,
+    archiveLegacy: process.env.AYOITSON_ARCHIVE_LEGACY === '1',
+});
+channelDB = new ChannelDAO( db.sqlite );
 initDB(db, channelDB)
 
 channelService = new ChannelService(channelDB);
 
-fillerDB = new FillerDB( path.join(process.env.DATABASE, 'filler') , channelService );
-customShowDB = new CustomShowDB( path.join(process.env.DATABASE, 'custom-shows') );
-let programPlayTimeDB = new ProgramPlayTimeDB( path.join(process.env.DATABASE, 'play-cache') );
+fillerDB = new FillerDAO( db.sqlite, channelService );
+customShowDB = new CustomShowDAO( db.sqlite );
+let programPlayTimeDB = new PlayTimeDAO( db.sqlite );
 let ffmpegSettingsService = new FfmpegSettingsService(db, unlockPath);
 
 async function initializeProgramPlayTimeDB() {
@@ -316,7 +330,6 @@ function initDB(db, channelDB) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/dizquetv.png')))
         fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data)
     }
-    dbMigration.initDB(db, channelDB, __dirname);
     if (!fs.existsSync(process.env.DATABASE + '/font.ttf')) {
         let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/font.ttf')))
         fs.writeFileSync(process.env.DATABASE + '/font.ttf', data)
@@ -415,6 +428,9 @@ onShutdown("log" , [],  async() => {
 });
 onShutdown("xmltv-writer" , [],  async() => {
     await xmltv.shutdown();
+} );
+onShutdown("sqlite", [], async() => {
+    db.close();
 } );
 onShutdown("active-channels", [], async() => {
     await activeChannelService.shutdown();

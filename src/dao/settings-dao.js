@@ -22,6 +22,10 @@ class SettingsDAO {
       .run(name, jsonStringify(value));
   }
 
+  delete(name) {
+    this.db.prepare('DELETE FROM settings WHERE name = ?').run(name);
+  }
+
   all() {
     return this.db
       .prepare('SELECT name, value FROM settings ORDER BY name')

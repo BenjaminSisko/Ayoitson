@@ -24,7 +24,7 @@ const SETTINGS_FILES = [
   'settings',
 ];
 
-async function migrateDiskdbToSqlite(options = {}) {
+function migrateDiskdbToSqlite(options = {}) {
   const sourceDir = options.sourceDir || path.join(process.cwd(), '.dizquetv');
   const targetDir = options.targetDir || path.join(process.cwd(), '.ayoitson');
   const db =

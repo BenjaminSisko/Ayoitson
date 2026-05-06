@@ -39,6 +39,12 @@ function createStoredUploadName(originalName) {
   return `${uuidv4()}${extension}`;
 }
 
+function toPublicPlexServer(server) {
+  const publicServer = { ...server };
+  delete publicServer.accessToken;
+  return publicServer;
+}
+
 module.exports = { router: api }
 function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideService, _m3uService, eventService, ffmpegSettingsService ) {
     let m3uService = _m3uService;
@@ -65,7 +71,7 @@ function api(db, channelService, fillerDB, customShowDB, xmltvInterval,  guideSe
       try {
         let servers = db['plex-servers'].find()
         servers.sort( (a,b) => { return a.index - b.index } );
-        res.send(servers)
+        res.send(servers.map(toPublicPlexServer))
       } catch(err) {
          console.error(err);
         res.status(500).send("error");
