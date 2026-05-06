@@ -1,0 +1,143 @@
+/* ============================================================================
+ * Ayo* component styles — keyframes and component-class hooks that can't be
+ * expressed cleanly via Tailwind utilities. Intentionally small.
+ *
+ * Imported by globals.css after Tailwind layers. All values reference tokens.
+ *
+ * — Claude (Anthropic), Lane Beta · 2026-05-06
+ * ========================================================================== */
+
+/* ----------------------------------------------------------------------------
+ * <AyoLiveIndicator> — pulsing "On Air" pill
+ *   1.5s loop, 4% opacity oscillation. Reduced-motion silences the pulse.
+ * -------------------------------------------------------------------------- */
+
+@keyframes ayo-live-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.96;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.ayo-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--rad-full);
+  background: var(--ayo-on-air);
+  color: #ffffff;
+  font-family: var(--ff-body);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  line-height: var(--lh-12);
+  letter-spacing: 0.02em;
+  animation: ayo-live-pulse 1.5s var(--ease-soft) infinite;
+}
+
+.ayo-live-indicator__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--rad-full);
+  background: #ffffff;
+  flex: 0 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayo-live-indicator {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * <AyoDrawer> — right-edge slide-over
+ *   Width min(560px, 100vw); slides in with --ease-snap.
+ * -------------------------------------------------------------------------- */
+
+@keyframes ayo-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ayo-drawer-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ayo-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 14, 14, 0.5);
+  z-index: 50;
+  animation: ayo-drawer-backdrop-in var(--dur-snap) var(--ease-soft);
+}
+
+.ayo-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-2);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  animation: ayo-drawer-in var(--dur-snap) var(--ease-snap);
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayo-drawer-backdrop,
+  .ayo-drawer-panel {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * <AyoToast> — bottom-right slide-in
+ * -------------------------------------------------------------------------- */
+
+@keyframes ayo-toast-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.ayo-toast {
+  animation: ayo-toast-in var(--dur-snap) var(--ease-snap);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayo-toast {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+ * Brand focus ring — visible against both --surface-page and --surface-1.
+ * Apply by adding the .ayo-focus class; uses :focus-visible only.
+ * -------------------------------------------------------------------------- */
+
+.ayo-focus:focus-visible {
+  outline: 3px solid var(--ayo-focus-ring);
+  outline-offset: 2px;
+}
