@@ -1,6 +1,5 @@
 
 const fs = require('fs')
-const unzip = require('unzipper')
 const path = require('path')
 const express = require('express')
 const bodyParser = require('body-parser')
@@ -9,9 +8,29 @@ const i18next = require('i18next');
 const i18nextMiddleware = require('i18next-http-middleware/cjs');
 const i18nextBackend = require('i18next-fs-backend/cjs');
 
-const api = require('./src/api')
+// Phase 4 (Lane Alpha): legacy `src/api.js` monolith was split into per-
+// resource routers under `src/api/*` and composed by `src/api/index.js`.
+// `compose(deps, { requireApiKey })` returns a single mountable router with
+// auth applied per-router (everything except GET /api/health).
+const apiCompose = require('./src/api');
 const video = require('./src/video')
 const HDHR = require('./src/hdhr')
+const { seedRuntimeAssets } = require('./src/lib/init-assets')
+const {
+  loadAllowedLocales,
+  createSafeLanguageDetector,
+  buildBackendPaths,
+  safeLng,
+} = require('./src/lib/i18n-locales')
+const { debounce } = require('./src/lib/debounce')
+const { openAyoitsonDatabase } = require('./src/storage/sqlite')
+const { createAuthMiddleware } = require('./src/middleware/auth')
+const {
+    createAuthFailureLimiter,
+    createStreamLimiter,
+} = require('./src/middleware/rate-limit')
+const { createCorsMiddleware } = require('./src/middleware/cors')
+const { createHelmetMiddleware } = require('./src/middleware/helmet')
 const FileCacheService = require('./src/services/file-cache-service');
 const CacheImageService = require('./src/services/cache-image-service');
 const ChannelService = require("./src/services/channel-service");
@@ -85,26 +104,6 @@ if (!fs.existsSync(process.env.DATABASE)) {
     fs.mkdirSync(process.env.DATABASE)
 }
 
-if(!fs.existsSync(path.join(process.env.DATABASE, 'images'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'images'))
-}
-if(!fs.existsSync(path.join(process.env.DATABASE, 'channels'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'channels'))
-}
-if(!fs.existsSync(path.join(process.env.DATABASE, 'filler'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'filler'))
-}
-if(!fs.existsSync(path.join(process.env.DATABASE, 'custom-shows'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'custom-shows'))
-}
-if(!fs.existsSync(path.join(process.env.DATABASE, 'cache'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'cache'))
-}
-if(!fs.existsSync(path.join(process.env.DATABASE, 'cache','images'))) {
-    fs.mkdirSync(path.join(process.env.DATABASE, 'cache','images'))
-}
-
-
 let fontAwesome = "fontawesome-free-5.15.4-web";
 let bootstrap = "bootstrap-4.4.1-dist";
 let db = createRuntimeDatabase({
@@ -113,7 +112,15 @@ let db = createRuntimeDatabase({
     archiveLegacy: process.env.AYOITSON_ARCHIVE_LEGACY === '1',
 });
 channelDB = new ChannelDAO( db.sqlite );
-initDB(db, channelDB)
+
+// First-boot asset seeding. The legacy initDB() function repeated the same
+// "if (!exists) read+write" pattern 8 times — closes BUG-TODO-REPETITIVE at
+// the original index.js:308 site.
+seedRuntimeAssets({
+    databaseDir: process.env.DATABASE,
+    resourcesDir: path.join(__dirname, 'resources'),
+    bundles: [fontAwesome, bootstrap],
+});
 
 channelService = new ChannelService(channelDB);
 
@@ -144,17 +151,33 @@ activeChannelService = new ActiveChannelService(onDemandService, channelService)
 
 eventService = new EventService();
 
+// i18next path-injection hardening (closes BUG-I18NEXT). The {{lng}}
+// interpolation in i18next-fs-backend's loadPath is the attack surface: if
+// the detected language is operator-controlled (Accept-Language, ?lng=, etc.)
+// an attacker can request `../../etc/passwd` style values and force
+// i18next-fs-backend to read arbitrary JSON files. We harden two ways:
+//   1. Discover the locales directory at startup and freeze the allowlist.
+//   2. Wrap i18next-http-middleware's LanguageDetector so the detected
+//      language is filtered through the allowlist before reaching
+//      i18next-fs-backend's loadPath template.
+const i18nPaths = buildBackendPaths(__dirname);
+const allowedLocales = loadAllowedLocales(i18nPaths.localesDir);
+const SafeLanguageDetector = createSafeLanguageDetector(
+    i18nextMiddleware.LanguageDetector,
+    { allowed: allowedLocales, fallback: 'en' }
+);
+
 i18next
     .use(i18nextBackend)
-    .use(i18nextMiddleware.LanguageDetector)
+    .use(SafeLanguageDetector)
     .init({
         // debug: true,
         initImmediate: false,
         backend: {
-            loadPath: path.join(__dirname, '/locales/server/{{lng}}.json'),
-            addPath: path.join(__dirname, '/locales/server/{{lng}}.json')
+            loadPath: i18nPaths.loadPath,
+            addPath: i18nPaths.addPath,
         },
-        lng: 'en',
+        lng: safeLng(allowedLocales, 'en', 'en'),
         fallbackLng: 'en',
         preload: ['en'],
     });
@@ -250,22 +273,51 @@ xmltvInterval.updateXML()
 xmltvInterval.startInterval()
 
 
-//setup xmltv update
-channelService.on("channel-update", (data) => {
+// Debounce the channel-update -> updateXML() chain. Editing 50 channels in
+// quick succession used to fire 50 regenerations; the new trailing-edge
+// debounce coalesces them into one regeneration ~750ms after the last save.
+// Closes BUG-TODO-DEBOUNCE.
+const debouncedGuideRefresh = debounce(() => {
     try {
         console.log("Updating TV Guide due to channel update...");
-        //TODO: this could be smarter, like avoid updating 3 times if the channel was saved three times in a short time interval...
         xmltvInterval.updateXML()
         xmltvInterval.restartInterval()
     } catch (err) {
-        console.error("Unexpected error issuing TV Guide udpate", err);
+        console.error("Unexpected error issuing TV Guide update", err);
     }
-} );
+}, 750);
+
+channelService.on("channel-update", () => {
+    debouncedGuideRefresh();
+});
 
 
 let hdhr = HDHR(db, channelDB)
 let app = express()
+
+// trust proxy: only honor X-Forwarded-* from loopback / link-local /
+// unique-local sources. Closes F9-trustproxy and the HDHR descriptor
+// host-header reflection (src/hdhr.js).
+app.set('trust proxy', 'loopback,linklocal,uniquelocal')
+
 eventService.setup(app);
+
+// --- Phase 4 security baseline (Lane Epsilon) ---
+// CORS deny-by-default runs first so cross-origin preflights never reach
+// further middleware. helmet sets CSP / HSTS / X-Frame-Options /
+// X-Content-Type-Options / Referrer-Policy on every response. The streaming
+// limiter is mounted on /video, /m3u, and the HDHR endpoints; the
+// auth-failure limiter is mounted in front of /api/* so brute-force probes
+// against api_keys cost the attacker.
+app.use(createCorsMiddleware())
+app.use(createHelmetMiddleware())
+app.use(createStreamLimiter())
+
+// API key store reuses the runtime SQLite database so api_keys live in
+// the same file as the rest of the operator's data.
+const apiKeyDb = openAyoitsonDatabase({ databaseDir: process.env.DATABASE })
+const requireApiKey = createAuthMiddleware(apiKeyDb)
+const authFailureLimiter = createAuthFailureLimiter()
 
 app.use(
     i18nextMiddleware.handle(i18next, {})
@@ -309,8 +361,32 @@ app.use('/favicon.svg', express.static(
 ) );
 app.use('/custom.css', express.static(path.join(process.env.DATABASE, 'custom.css')))
 
-// API Routers
-app.use(api.router(db, channelService, fillerDB, customShowDB, xmltvInterval, guideService, m3uService, eventService, ffmpegSettingsService))
+// API Routers — Phase 4 redesign (Lane Alpha). Per-resource routers under
+// `src/api/*` are composed by `src/api/index.js`; auth is mounted *per-router*
+// so `GET /api/health` stays public for liveness probes while everything
+// else (including `GET /api/plex-servers`) requires X-API-Key.
+//
+// The auth-failure rate limiter still runs at the /api seam so brute-force
+// probes against the api_keys store cost the attacker — `skipSuccessfulRequests`
+// in the limiter ensures only failed responses are counted.
+app.use('/api', authFailureLimiter)
+app.use(
+    apiCompose.compose(
+        {
+            db,
+            channelService,
+            fillerDB,
+            customShowDB,
+            xmltvInterval,
+            guideService,
+            m3uService,
+            eventService,
+            ffmpegSettingsService,
+            apiKeyDb,
+        },
+        { requireApiKey }
+    )
+)
 app.use('/api/cache/images', cacheImageService.apiRouters())
 app.use('/' + fontAwesome, express.static(path.join(process.env.DATABASE, fontAwesome)))
 app.use('/' + bootstrap, express.static(path.join(process.env.DATABASE, bootstrap)))
@@ -324,63 +400,8 @@ app.listen(process.env.PORT, () => {
         hdhr.ssdp.start()
 })
 
-function initDB(db, channelDB) {
-    //TODO: this is getting so repetitive, do it better
-    if (!fs.existsSync(process.env.DATABASE + '/images/dizquetv.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/dizquetv.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/font.ttf')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/font.ttf')))
-        fs.writeFileSync(process.env.DATABASE + '/font.ttf', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/dizquetv.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/dizquetv.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/dizquetv.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-error-screen.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-error-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-error-screen.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-offline-screen.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-offline-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-offline-screen.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/generic-music-screen.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/generic-music-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/generic-music-screen.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/loading-screen.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/loading-screen.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/loading-screen.png', data)
-    }
-    if (!fs.existsSync(process.env.DATABASE + '/images/black.png')) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources/black.png')))
-        fs.writeFileSync(process.env.DATABASE + '/images/black.png', data)
-    }
-    if (!fs.existsSync( path.join(process.env.DATABASE, 'custom.css') )) {
-        let data = fs.readFileSync(path.resolve(path.join(__dirname, 'resources', 'default-custom.css')))
-        fs.writeFileSync( path.join(process.env.DATABASE, 'custom.css'), data)
-    }
-    if (!fs.existsSync( path.join(process.env.DATABASE, fontAwesome) )) {
-
-        let sourceZip = path.resolve(__dirname, 'resources', fontAwesome) + ".zip";
-        let destinationPath = path.resolve(process.env.DATABASE);
-
-        fs.createReadStream(sourceZip)
-            .pipe(unzip.Extract({ path: destinationPath }));
-
-    }
-    if (!fs.existsSync( path.join(process.env.DATABASE, bootstrap) )) {
-
-        let sourceZip = path.resolve(__dirname, 'resources', bootstrap) + ".zip";
-        let destinationPath = path.resolve(process.env.DATABASE);
-
-        fs.createReadStream(sourceZip)
-            .pipe(unzip.Extract({ path: destinationPath }));
-
-    }
-}
+// initDB() asset-seeding logic moved to `src/lib/init-assets.js`
+// (seedRuntimeAssets). Closes BUG-TODO-REPETITIVE.
 
 
 function _wait(t) {

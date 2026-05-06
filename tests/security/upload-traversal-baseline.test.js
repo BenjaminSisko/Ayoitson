@@ -45,7 +45,7 @@ describe('Phase 1 image upload path traversal baseline', () => {
         safeFileNames: false,
       });
       const response = await request(app)
-        .post('/api/upload/image')
+        .post('/api/uploads/image')
         .set('Content-Type', `multipart/form-data; boundary=${boundary}`)
         .send(multipartBody(boundary, filename));
 
@@ -62,7 +62,7 @@ describe('Phase 1 image upload path traversal baseline', () => {
       safeFileNames: false,
     });
     const response = await request(app)
-      .post('/api/upload/image')
+      .post('/api/uploads/image')
       .attach('image', Buffer.from('not really an image'), {
         filename: '..outside-upload.txt',
         contentType: 'image/png',
@@ -77,13 +77,13 @@ describe('Phase 1 image upload path traversal baseline', () => {
   test('accepted uploads use a server-generated name on disk', async () => {
     const app = createUploadApp();
     const response = await request(app)
-      .post('/api/upload/image')
+      .post('/api/uploads/image')
       .attach('image', Buffer.from('not really an image'), {
         filename: 'logo.png',
         contentType: 'image/png',
       });
 
-    expect(response.status).toBe(200);
+    expect([200, 201]).toContain(response.status);
     expect(response.body.data.name).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/
     );

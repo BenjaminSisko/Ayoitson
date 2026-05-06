@@ -3,23 +3,24 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const request = require('supertest');
-const api = require('../../src/api');
+
+const apiCompose = require('../../src/api');
 const { createRuntimeDatabase } = require('../../src/storage/sqlite-runtime');
 
 function createApp(db) {
   const app = express();
   app.use(express.json());
   app.use(
-    api.router(
+    apiCompose.compose({
       db,
-      {
+      channelService: {
         getAllChannelNumbers: async () => [],
         getAllChannels: async () => [],
         getChannel: async () => null,
         saveChannel: async () => {},
         deleteChannel: async () => {},
       },
-      {
+      fillerDB: {
         getAllFillersInfo: async () => [],
         getFiller: async () => null,
         saveFiller: async () => {},
@@ -27,40 +28,40 @@ function createApp(db) {
         deleteFiller: async () => {},
         getFillerChannels: async () => [],
       },
-      {
+      customShowDB: {
         getAllShowsInfo: async () => [],
         getShow: async () => null,
         saveShow: async () => {},
         createShow: async () => 'fixture',
         deleteShow: async () => {},
       },
-      {
+      xmltvInterval: {
         lastUpdated: new Date(0),
         updateXML: () => {},
         restartInterval: () => {},
       },
-      {
+      guideService: {
         get: async () => ({}),
         getStatus: async () => ({}),
         getChannelLineup: async () => [],
       },
-      {
+      m3uService: {
         getChannelList: async () => '',
       },
-      {
+      eventService: {
         push: () => {},
       },
-      {
+      ffmpegSettingsService: {
         get: () => ({ ffmpegPath: 'ffmpeg' }),
         update: () => ({ ffmpeg: { ffmpegPath: 'ffmpeg' } }),
         reset: () => ({ ffmpegPath: 'ffmpeg' }),
-      }
-    )
+      },
+    })
   );
   return app;
 }
 
-describe('Phase 3 Plex server API redaction', () => {
+describe('Phase 3 Plex server API redaction (under Phase 4 routes)', () => {
   test('GET /api/plex-servers does not expose decrypted access tokens', async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ayoitson-api-'));
     const db = createRuntimeDatabase({

@@ -3,6 +3,8 @@ import prettier from 'eslint-config-prettier';
 const legacyGenerated = [
   '.ayoitson/**',
   '.dizquetv/**',
+  '.dizquetv-legacy-*/**',
+  '.dizquetv.backup-pre-codex-smoke-*/**',
   'bin/**',
   'dist/**',
   'node_modules/**',
