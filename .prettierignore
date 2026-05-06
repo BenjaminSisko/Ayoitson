@@ -1,0 +1,5 @@
+bin/
+dist/
+node_modules/
+package-lock.json
+web/public/bundle.js

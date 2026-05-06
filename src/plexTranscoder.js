@@ -1,9 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const fs = require('fs');
+const { getInternalBaseUrl } = require('./lib/url');
 
 class PlexTranscoder {
-    constructor(clientId, server, settings, channel, lineupItem) {
+    constructor(clientId, server, settings, channel, lineupItem, req) {
         this.session = uuidv4()
 
         this.device = "channel-" + channel.number;
@@ -28,6 +29,7 @@ class PlexTranscoder {
         this.currTimeS = this.currTimeMs / 1000
         this.duration = lineupItem.duration
         this.server = server
+        this.req = req
 
         this.transcodingArgs = undefined
         this.decisionJson = undefined
@@ -278,7 +280,7 @@ lang=en`
             ret.placeholderImage = (this.albumArt.path != null) ?
                 ret.placeholderImage = this.albumArt.path
                 :
-                ret.placeholderImage = `http://localhost:${process.env.PORT}/images/generic-music-screen.png`
+                ret.placeholderImage = `${getInternalBaseUrl(this.req)}/images/generic-music-screen.png`
             ;
         }
 

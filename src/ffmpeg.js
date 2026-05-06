@@ -1,5 +1,6 @@
 const spawn = require('child_process').spawn
 const events = require('events')
+const { getInternalBaseUrl } = require('./lib/url')
 
 const MAXIMUM_ERROR_DURATION_MS = 60000;
 const REALLY_RIDICULOUSLY_HIGH_FPS_FOR_DIZQUETVS_USECASE = 120;
@@ -8,7 +9,7 @@ class FFMPEG extends events.EventEmitter {
     constructor(opts, channel) {
         super()
         this.opts = opts;
-        this.errorPicturePath = `http://localhost:${process.env.PORT}/images/generic-error-screen.png`;
+        this.errorPicturePath = `${getInternalBaseUrl()}/images/generic-error-screen.png`;
         this.ffmpegName = "unnamed ffmpeg";
         if (! this.opts.enableFFMPEGTranscoding) {
             //this ensures transcoding is completely disabled even if
@@ -132,7 +133,7 @@ class FFMPEG extends events.EventEmitter {
         if (isConcatPlaylist == true)
             ffmpegArgs.push(`-f`, `concat`, 
                             `-safe`, `0`,
-                            `-protocol_whitelist`, `file,http,tcp,https,tcp,tls`)
+                            `-protocol_whitelist`, `http,tcp,https,tls`)
 
         // Map correct audio index. '?' so doesn't fail if no stream available.
         let audioIndex = (typeof streamStats === 'undefined') ? 'a' : `${streamStats.audioIndex}`;

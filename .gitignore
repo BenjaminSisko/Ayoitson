@@ -6,3 +6,6 @@ bin/
 web/public/bundle.js
 *.orig
 package-lock.json
+Ayoitson-Obsidian-Vault/
+test-results/
+playwright-report/

@@ -51,7 +51,7 @@ if (NODE < 12) {
     console.error(`WARNING: Your nodejs version ${process.version} is lower than supported. dizqueTV has been tested best on nodejs 12.16.`);
 }
 
-unlockPath = false;
+let unlockPath = false;
 for (let i = 0, l = process.argv.length; i < l; i++) {
     if ((process.argv[i] === "-p" || process.argv[i] === "--port") && i + 1 !== l)
         process.env.PORT = process.argv[i + 1]
@@ -258,9 +258,15 @@ app.use(
 );
 
 app.use(fileUpload({
-    createParentPath: true
+    limits: {
+        fileSize: 10 * 1024 * 1024,
+        files: 1,
+    },
+    abortOnLimit: true,
+    safeFileNames: true,
+    preserveExtension: true,
 }));
-app.use(bodyParser.json({limit: '50mb'}))
+app.use(bodyParser.json({limit: '1mb'}))
 
 app.get('/version.js', (req, res) => {
     res.writeHead(200, {

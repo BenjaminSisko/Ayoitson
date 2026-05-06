@@ -7,6 +7,7 @@ const fs = require('fs')
 const ProgramPlayer = require('./program-player');
 const channelCache  = require('./channel-cache')
 const wereThereTooManyAttempts = require('./throttler');
+const { getInternalBaseUrl } = require('./lib/url')
 
 module.exports = { router: video, shutdown: shutdown }
 
@@ -98,7 +99,9 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
                 stopped = true;
                 try {
                     res.end();
-                } catch (err) {}
+                } catch (err) {
+                    console.warn('Unable to end stream response cleanly', err);
+                }
                 ffmpeg.kill();
             }
         }
@@ -125,7 +128,8 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
         })
 
         let channelNum = parseInt(req.query.channel, 10)
-        let ff = await ffmpeg.spawnConcat(`http://localhost:${process.env.PORT}/playlist?channel=${channelNum}&audioOnly=${audioOnly}&stepNumber={step}`);
+        const baseUrl = getInternalBaseUrl(req);
+        let ff = await ffmpeg.spawnConcat(`${baseUrl}/playlist?channel=${channelNum}&audioOnly=${audioOnly}&stepNumber={step}`);
         ff.pipe(res,  { end: false}  );
     };
     router.get('/video', async(req, res) => {
@@ -381,6 +385,7 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
             db: db,
             m3u8: m3u8,
             audioOnly : audioOnly,
+            req: req,
         }
         
         let player = new ProgramPlayer(playerContext);
@@ -537,15 +542,17 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
 
         cur ="59.0";
 
+        const baseUrl = getInternalBaseUrl(req);
+
         if ( ffmpegSettings.enableFFMPEGTranscoding === true) {
             //data += `#EXTINF:${cur},\n`;
-            data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&first=0&m3u8=1&session=${sessionId}\n`;
+            data += `${baseUrl}/stream?channel=${channelNum}&first=0&m3u8=1&session=${sessionId}\n`;
         }
         //data += `#EXTINF:${cur},\n`;
-        data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&first=1&m3u8=1&session=${sessionId}\n`
+        data += `${baseUrl}/stream?channel=${channelNum}&first=1&m3u8=1&session=${sessionId}\n`
         for (var i = 0; i < maxStreamsToPlayInARow - 1; i++) {
             //data += `#EXTINF:${cur},\n`;
-            data += `${req.protocol}://${req.get('host')}/stream?channel=${channelNum}&m3u8=1&session=${sessionId}\n`
+            data += `${baseUrl}/stream?channel=${channelNum}&m3u8=1&session=${sessionId}\n`
         }
 
         res.send(data)
@@ -586,6 +593,7 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
 
         let sessionId = StreamCount++;
         let audioOnly = ("true" == req.query.audioOnly);
+        const baseUrl = getInternalBaseUrl(req);
 
         let transcodingEnabled = (ffmpegSettings.enableFFMPEGTranscoding === true)
             && (ffmpegSettings.normalizeVideoCodec === true)
@@ -599,22 +607,22 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
             && (stepNumber == 0)
         ) {
             //loading screen
-            data += `file 'http://localhost:${process.env.PORT}/stream?channel=${channelNum}&first=0&session=${sessionId}&audioOnly=${audioOnly}'\n`;
+            data += `file '${baseUrl}/stream?channel=${channelNum}&first=0&session=${sessionId}&audioOnly=${audioOnly}'\n`;
         }
         let remaining = maxStreamsToPlayInARow;
         if (stepNumber == 0) {
-            data += `file 'http://localhost:${process.env.PORT}/stream?channel=${channelNum}&first=1&session=${sessionId}&audioOnly=${audioOnly}'\n`
+            data += `file '${baseUrl}/stream?channel=${channelNum}&first=1&session=${sessionId}&audioOnly=${audioOnly}'\n`
 
             if (transcodingEnabled && (audioOnly !== true)) {
-                data += `file 'http://localhost:${process.env.PORT}/stream?channel=${channelNum}&between=1&session=${sessionId}&audioOnly=${audioOnly}'\n`;
+                data += `file '${baseUrl}/stream?channel=${channelNum}&between=1&session=${sessionId}&audioOnly=${audioOnly}'\n`;
             }
             remaining--;
         }
 
         for (var i = 0; i < remaining; i++) {
-            data += `file 'http://localhost:${process.env.PORT}/stream?channel=${channelNum}&session=${sessionId}&audioOnly=${audioOnly}'\n`
+            data += `file '${baseUrl}/stream?channel=${channelNum}&session=${sessionId}&audioOnly=${audioOnly}'\n`
             if (transcodingEnabled && (audioOnly !== true) ) {
-                data += `file 'http://localhost:${process.env.PORT}/stream?channel=${channelNum}&between=1&session=${sessionId}&audioOnly=${audioOnly}'\n`
+                data += `file '${baseUrl}/stream?channel=${channelNum}&between=1&session=${sessionId}&audioOnly=${audioOnly}'\n`
             }
         }
 
@@ -643,8 +651,9 @@ function video( channelService, fillerDB, db, programmingService, activeChannelS
             res.status(404).send("Channel not found.");
             return;
         }
+        const baseUrl = getInternalBaseUrl(req);
         res.type('video/x-mpegurl');
-        res.status(200).send(`#EXTM3U\n${req.protocol}://${req.get('host')}/${path}?channel=${channelNum}\n\n`);
+        res.status(200).send(`#EXTM3U\n${baseUrl}/${path}?channel=${channelNum}\n\n`);
     }
 
     router.get('/media-player/:number.m3u', async (req, res) => {
