@@ -110,6 +110,33 @@ export default [
     },
   },
   {
+    files: ['index.ts', 'src/**/*.ts'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'script',
+      },
+      globals: {
+        Buffer: 'readonly',
+        URL: 'readonly',
+        clearInterval: 'readonly',
+        clearTimeout: 'readonly',
+        console: 'readonly',
+        module: 'writable',
+        process: 'readonly',
+        require: 'readonly',
+        setImmediate: 'readonly',
+        setInterval: 'readonly',
+        setTimeout: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+    rules: {
+      'no-restricted-syntax': ['error', ...noExecSelectors],
+    },
+  },
+  {
     files: ['src/ffmpeg-info.js'],
     rules: {
       // Tracked as F3; Lane Gamma owns the Phase 1 exec -> execFile hot-fix.

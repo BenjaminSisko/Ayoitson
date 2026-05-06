@@ -12,6 +12,7 @@ export default defineConfig({
     globals: true,
     include: ['tests/**/*.test.js', 'web/src/**/*.test.tsx'],
     exclude: ['tests/e2e/**'],
+    setupFiles: ['tests/setup/register-ts.cjs'],
     restoreMocks: true,
     coverage: {
       provider: 'v8',

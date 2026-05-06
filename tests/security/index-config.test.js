@@ -2,11 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const indexSource = () =>
-  fs.readFileSync(path.join(__dirname, '..', '..', 'index.js'), 'utf8');
+  fs.readFileSync(path.join(__dirname, '..', '..', 'index.ts'), 'utf8');
 
 describe('Phase 1 upload and body parser hardening', () => {
   test('JSON bodies are capped at 1MB', () => {
-    expect(indexSource()).toContain("bodyParser.json({limit: '1mb'})");
+    expect(indexSource()).toMatch(
+      /bodyParser\.json\(\{\s*limit:\s*'1mb'\s*\}\)/
+    );
   });
 
   test('multipart uploads have size, count, and filename safety controls', () => {
