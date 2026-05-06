@@ -71,37 +71,37 @@ function createApp() {
   );
 
   app.use(
-    api.router(
+    api.compose({
       db,
       channelService,
-      {
+      fillerDB: {
         getAllFillersInfo: async () => [],
         getFiller: async () => undefined,
       },
-      {
+      customShowDB: {
         getAllShowsInfo: async () => [],
         getShow: async () => undefined,
       },
-      {
+      xmltvInterval: {
         lastUpdated: new Date(0),
         updateXML: () => {},
         restartInterval: () => {},
       },
-      {
+      guideService: {
         get: async () => ({}),
         getStatus: async () => ({}),
         getChannelLineup: async () => [],
       },
       m3uService,
-      {
+      eventService: {
         push: () => {},
       },
-      {
+      ffmpegSettingsService: {
         get: () => ffmpegSettings(),
         update: () => ({ ffmpeg: ffmpegSettings() }),
         reset: () => ffmpegSettings(),
-      }
-    )
+      },
+    })
   );
 
   app.get('/test/offline-player/loading-picture', (req, res) => {
@@ -174,7 +174,7 @@ test.describe('INTERNAL_URL streaming output', () => {
     });
 
     try {
-      const m3uResponse = await context.get('/api/channels.m3u');
+      const m3uResponse = await context.get('/api/guide/channels.m3u');
       const m3u = await m3uResponse.text();
 
       expect(m3uResponse.status()).toBe(200);

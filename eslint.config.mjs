@@ -1,4 +1,5 @@
 import prettier from 'eslint-config-prettier';
+import tseslint from 'typescript-eslint';
 
 const legacyGenerated = [
   '.ayoitson/**',
@@ -7,6 +8,7 @@ const legacyGenerated = [
   'dist/**',
   'node_modules/**',
   'package-lock.json',
+  'web/dist/**',
   'web/public/bundle.js',
 ];
 
@@ -22,6 +24,23 @@ const noExecSelectors = [
       "VariableDeclarator[id.name='exec'][init.type='MemberExpression'][init.object.type='CallExpression'][init.object.callee.name='require'][init.object.arguments.0.value='child_process'][init.property.name='exec']",
     message:
       'Use child_process.execFile or spawn(args[]) instead of child_process.exec.',
+  },
+];
+
+const frontendRestrictedSelectors = [
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    message:
+      'Render operator/media text as text nodes. dangerouslySetInnerHTML is banned for CSP and XSS safety.',
+  },
+  {
+    selector: "JSXAttribute[name.name='style']",
+    message:
+      'Inline style attributes are banned so the React frontend can run under strict CSP.',
+  },
+  {
+    selector: "CallExpression[callee.name='eval']",
+    message: 'eval is banned in the React frontend.',
   },
 ];
 
@@ -63,6 +82,28 @@ export default [
     },
     rules: {
       'no-restricted-syntax': ['error', ...noExecSelectors],
+    },
+  },
+  {
+    files: ['web/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+      globals: {
+        console: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+        localStorage: 'readonly',
+        Response: 'readonly',
+        window: 'readonly',
+      },
+    },
+    rules: {
+      'no-restricted-syntax': ['error', ...frontendRestrictedSelectors],
     },
   },
   {

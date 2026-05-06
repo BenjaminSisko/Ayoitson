@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 42 29% 97%;
+  --foreground: 199 24% 15%;
+  --surface: 0 0% 100%;
+  --border: 38 17% 84%;
+  --muted: 42 24% 92%;
+  --muted-foreground: 204 10% 39%;
+  --primary: 174 55% 25%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 32 74% 48%;
+  --danger: 355 71% 45%;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(90deg, rgb(35 94 88 / 0.05) 1px, transparent 1px),
+    linear-gradient(rgb(35 94 88 / 0.045) 1px, transparent 1px),
+    hsl(var(--background));
+  background-size: 32px 32px;
+  color: hsl(var(--foreground));
+  font-family: Aptos, ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: rgb(35 94 88 / 0.24);
+}
