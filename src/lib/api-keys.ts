@@ -1,4 +1,4 @@
-// src/lib/api-keys.js
+// src/lib/api-keys.ts
 // API key lifecycle: createKey, revokeKey, listKeys, verifyKey.
 //
 // Storage: SQLite `api_keys` table (migrations/002_api_keys.sql).
@@ -11,8 +11,8 @@
 
 'use strict';
 
-const crypto = require('crypto');
-const argon2 = require('argon2');
+const crypto = require('crypto') as typeof import('crypto');
+const argon2 = require('argon2') as typeof import('argon2');
 
 // Argon2id parameters. The argon2 npm package exposes these constants.
 const ARGON2_OPTIONS = Object.freeze({
@@ -27,29 +27,66 @@ const ARGON2_OPTIONS = Object.freeze({
 const KEY_BYTES = 32;
 const KEY_PREFIX = 'ayo_';
 
-function generateRawKey() {
+type SqliteRunResult = {
+  changes?: number;
+};
+
+type SqliteStatement<T = Record<string, unknown>> = {
+  all(...params: unknown[]): T[];
+  get(...params: unknown[]): T | undefined;
+  run(...params: unknown[]): SqliteRunResult;
+};
+
+type SqliteDatabase = {
+  prepare<T = Record<string, unknown>>(sql: string): SqliteStatement<T>;
+};
+
+type ApiKeyRow = {
+  id: string;
+  name: string;
+  hashed_key: string;
+  scopes: string;
+  created_at: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+};
+
+type ApiKeyMetadata = {
+  id: string;
+  name: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+};
+
+function generateRawKey(): string {
   const buf = crypto.randomBytes(KEY_BYTES);
   return KEY_PREFIX + buf.toString('base64url');
 }
 
-function generateId() {
+function generateId(): string {
   return crypto.randomBytes(8).toString('hex');
 }
 
-function isValidKeyShape(key) {
-  return typeof key === 'string' && key.length > 8 && key.startsWith(KEY_PREFIX);
+function isValidKeyShape(key: unknown): key is string {
+  return (
+    typeof key === 'string' && key.length > 8 && key.startsWith(KEY_PREFIX)
+  );
 }
 
-function normalizeScopes(scopes) {
+function normalizeScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) {
     return [];
   }
   return scopes.filter((s) => typeof s === 'string' && s.length > 0);
 }
 
-function rowToMetadata(row) {
+function rowToMetadata(
+  row: ApiKeyRow | undefined | null
+): ApiKeyMetadata | null {
   if (!row) return null;
-  let scopes = [];
+  let scopes: string[] = [];
   try {
     scopes = JSON.parse(row.scopes);
     if (!Array.isArray(scopes)) scopes = [];
@@ -71,7 +108,11 @@ function rowToMetadata(row) {
  * Caller is responsible for displaying the raw key to the operator and
  * never persisting it.
  */
-async function createKey(db, name, scopes = []) {
+async function createKey(
+  db: SqliteDatabase,
+  name: string,
+  scopes: string[] = []
+): Promise<{ metadata: ApiKeyMetadata; rawKey: string }> {
   if (typeof name !== 'string' || name.trim().length === 0) {
     throw new Error('createKey: name is required');
   }
@@ -86,14 +127,21 @@ async function createKey(db, name, scopes = []) {
      VALUES (?, ?, ?, ?)`
   ).run(id, name.trim(), hashed, scopesJson);
 
-  const row = db.prepare('SELECT * FROM api_keys WHERE id = ?').get(id);
+  const row = db
+    .prepare<ApiKeyRow>('SELECT * FROM api_keys WHERE id = ?')
+    .get(id);
+  const metadata = rowToMetadata(row);
+  if (!metadata) {
+    throw new Error('createKey: inserted key could not be loaded');
+  }
+
   return {
-    metadata: rowToMetadata(row),
+    metadata,
     rawKey,
   };
 }
 
-function revokeKey(db, id) {
+function revokeKey(db: SqliteDatabase, id: string): { revoked: boolean } {
   if (typeof id !== 'string' || id.length === 0) {
     return { revoked: false };
   }
@@ -104,14 +152,16 @@ function revokeKey(db, id) {
        WHERE id = ? AND revoked_at IS NULL`
     )
     .run(id);
-  return { revoked: result.changes > 0 };
+  return { revoked: (result.changes ?? 0) > 0 };
 }
 
-function listKeys(db) {
+function listKeys(db: SqliteDatabase): ApiKeyMetadata[] {
   const rows = db
-    .prepare('SELECT * FROM api_keys ORDER BY created_at DESC')
+    .prepare<ApiKeyRow>('SELECT * FROM api_keys ORDER BY created_at DESC')
     .all();
-  return rows.map(rowToMetadata);
+  return rows
+    .map(rowToMetadata)
+    .filter((metadata): metadata is ApiKeyMetadata => Boolean(metadata));
 }
 
 /**
@@ -123,12 +173,15 @@ function listKeys(db) {
  * tier with many keys, add an indexed lookup token (e.g. HMAC prefix) and
  * verify only the matching row.
  */
-async function verifyKey(db, candidate) {
+async function verifyKey(
+  db: SqliteDatabase,
+  candidate: unknown
+): Promise<ApiKeyMetadata | null> {
   if (!isValidKeyShape(candidate)) {
     return null;
   }
   const rows = db
-    .prepare('SELECT * FROM api_keys WHERE revoked_at IS NULL')
+    .prepare<ApiKeyRow>('SELECT * FROM api_keys WHERE revoked_at IS NULL')
     .all();
   for (const row of rows) {
     let ok = false;

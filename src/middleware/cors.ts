@@ -1,4 +1,4 @@
-// src/middleware/cors.js
+// src/middleware/cors.ts
 // Deny-by-default CORS policy. Same-origin requests are not subject to
 // CORS, so this middleware only matters for cross-origin browsers. We
 // reject every cross-origin preflight unless the origin matches an
@@ -11,20 +11,45 @@
 
 'use strict';
 
-const { apiError, FORBIDDEN } = require('../lib/errors');
+const { apiError, FORBIDDEN } = require('../lib/errors') as {
+  apiError(res: ResponseLike, code: unknown, message: string): unknown;
+  FORBIDDEN: unknown;
+};
 
-function parseAllowlist(raw) {
+type RequestLike = {
+  method?: string;
+  protocol?: string;
+  get?(name: string): string | undefined;
+};
+
+type ResponseLike = {
+  setHeader(name: string, value: string): void;
+  status(code: number): { end(): unknown };
+};
+
+type NextFunction = () => void;
+
+type CorsMiddlewareOptions = {
+  allowlist?: string[];
+};
+
+function parseAllowlist(raw: unknown): string[] {
   if (!raw || typeof raw !== 'string') return [];
   return raw
     .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+    .map((s: string) => s.trim())
+    .filter((s: string) => s.length > 0);
 }
 
-function createCorsMiddleware(options = {}) {
-  const allowlist = options.allowlist || parseAllowlist(process.env.AYOITSON_CORS_ALLOWLIST);
+function createCorsMiddleware(options: CorsMiddlewareOptions = {}) {
+  const allowlist =
+    options.allowlist || parseAllowlist(process.env.AYOITSON_CORS_ALLOWLIST);
 
-  return function corsDenyByDefault(req, res, next) {
+  return function corsDenyByDefault(
+    req: RequestLike,
+    res: ResponseLike,
+    next: NextFunction
+  ) {
     const origin = req.get && req.get('origin');
     const requestOrigin = getRequestOrigin(req);
 
@@ -58,7 +83,7 @@ function createCorsMiddleware(options = {}) {
   };
 }
 
-function getRequestOrigin(req) {
+function getRequestOrigin(req: RequestLike): string | null {
   if (!req || !req.get) return null;
   const host = req.get('host');
   if (!host) return null;

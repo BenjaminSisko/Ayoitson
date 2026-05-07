@@ -1,4 +1,4 @@
-// src/middleware/auth.js
+// src/middleware/auth.ts
 // Validates the X-API-Key header against argon2id-hashed entries in the
 // api_keys SQLite table. On success, populates req.apiKey with metadata
 // (never raw key material). On miss/invalid, returns 401 with the
@@ -10,23 +10,68 @@
 
 'use strict';
 
-const { verifyKey } = require('../lib/api-keys');
-const { apiError, UNAUTHORIZED } = require('../lib/errors');
+const { verifyKey } = require('../lib/api-keys') as {
+  verifyKey(
+    db: SqliteDatabase,
+    candidate: unknown
+  ): Promise<ApiKeyMetadata | null>;
+};
+const { apiError, UNAUTHORIZED } = require('../lib/errors') as {
+  apiError(res: ResponseLike, code: unknown, message: string): unknown;
+  UNAUTHORIZED: unknown;
+};
 
 const HEADER = 'x-api-key';
 
-function createAuthMiddleware(db, options = {}) {
+type SqliteDatabase = {
+  prepare(sql: string): unknown;
+};
+
+type ApiKeyMetadata = {
+  id: string;
+  name: string;
+  scopes: string[];
+  revokedAt: string | null;
+};
+
+type RequestLike = {
+  apiKey?: ApiKeyMetadata;
+  authFailed?: boolean;
+  get?(name: string): string | undefined;
+};
+
+type ResponseLike = Record<string, unknown>;
+type NextFunction = () => void;
+
+type AuthMiddlewareOptions = {
+  bypass?: boolean;
+};
+
+function createAuthMiddleware(
+  db: SqliteDatabase,
+  options: AuthMiddlewareOptions = {}
+) {
   if (!db || typeof db.prepare !== 'function') {
     throw new Error('createAuthMiddleware: db (better-sqlite3) is required');
   }
 
   // Optional bypass for explicit test contexts. Never honored when
   // NODE_ENV === 'production'.
-  const bypass = Boolean(options.bypass) && process.env.NODE_ENV !== 'production';
+  const bypass =
+    Boolean(options.bypass) && process.env.NODE_ENV !== 'production';
 
-  return async function requireApiKey(req, res, next) {
+  return async function requireApiKey(
+    req: RequestLike,
+    res: ResponseLike,
+    next: NextFunction
+  ) {
     if (bypass) {
-      req.apiKey = { id: 'test', name: 'test-bypass', scopes: ['*'] };
+      req.apiKey = {
+        id: 'test',
+        name: 'test-bypass',
+        scopes: ['*'],
+        revokedAt: null,
+      };
       return next();
     }
 
@@ -35,7 +80,7 @@ function createAuthMiddleware(db, options = {}) {
       return apiError(res, UNAUTHORIZED, 'Missing X-API-Key header');
     }
 
-    let metadata = null;
+    let metadata: ApiKeyMetadata | null = null;
     try {
       metadata = await verifyKey(db, candidate);
     } catch {

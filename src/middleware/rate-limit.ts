@@ -1,4 +1,4 @@
-// src/middleware/rate-limit.js
+// src/middleware/rate-limit.ts
 // express-rate-limit configurations. Two profiles:
 //
 //   - authFailureLimiter: 10 failed-auth attempts / 15 min / IP. Mounted
@@ -11,14 +11,29 @@
 
 'use strict';
 
-const rateLimit = require('express-rate-limit');
-const { apiError, RATE_LIMITED } = require('../lib/errors');
+const rateLimit = require('express-rate-limit') as (
+  options: Record<string, unknown>
+) => unknown;
+const { apiError, RATE_LIMITED } = require('../lib/errors') as {
+  apiError(res: ResponseLike, code: unknown, message: string): unknown;
+  RATE_LIMITED: unknown;
+};
 
-function rateLimitedHandler(_req, res, _next, _options) {
+type RequestLike = Record<string, unknown>;
+type ResponseLike = Record<string, unknown>;
+type NextFunction = () => void;
+type RateLimitOptions = Record<string, unknown>;
+
+function rateLimitedHandler(
+  _req: RequestLike,
+  res: ResponseLike,
+  _next: NextFunction,
+  _options: RateLimitOptions
+) {
   return apiError(res, RATE_LIMITED, 'Too many requests');
 }
 
-function createAuthFailureLimiter(overrides = {}) {
+function createAuthFailureLimiter(overrides: RateLimitOptions = {}) {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
@@ -34,7 +49,7 @@ function createAuthFailureLimiter(overrides = {}) {
   });
 }
 
-function createStreamLimiter(overrides = {}) {
+function createStreamLimiter(overrides: RateLimitOptions = {}) {
   return rateLimit({
     windowMs: 60 * 1000,
     // Stream clients (HDHR, VLC, Plex DVR) burst many small requests when

@@ -1,4 +1,4 @@
-// src/middleware/helmet.js
+// src/middleware/helmet.ts
 // helmet() configuration with explicit CSP (nonce-based, no unsafe-inline),
 // HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, and
 // Referrer-Policy strict-origin-when-cross-origin.
@@ -12,15 +12,41 @@
 
 'use strict';
 
-const crypto = require('crypto');
-const helmet = require('helmet');
+const crypto = require('crypto') as typeof import('crypto');
+const helmet = require('helmet') as (
+  options: Record<string, unknown>
+) => unknown;
 
-function nonceMiddleware(_req, res, next) {
+type RequestLike = Record<string, unknown>;
+type ResponseLike = {
+  locals: {
+    cspNonce?: string;
+  };
+};
+type NextFunction = () => void;
+
+type HelmetOptions = {
+  enforce?: boolean;
+};
+
+type CspDirectiveValue =
+  | string
+  | null
+  | ((_req: RequestLike, res: ResponseLike) => string);
+
+function nonceMiddleware(
+  _req: RequestLike,
+  res: ResponseLike,
+  next: NextFunction
+): void {
   res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
   next();
 }
 
-function buildCspDirectives() {
+function buildCspDirectives(): Record<
+  string,
+  CspDirectiveValue | CspDirectiveValue[]
+> {
   return {
     defaultSrc: ["'self'"],
     scriptSrc: [
@@ -41,7 +67,7 @@ function buildCspDirectives() {
   };
 }
 
-function createHelmetMiddleware(options = {}) {
+function createHelmetMiddleware(options: HelmetOptions = {}) {
   const enforce =
     options.enforce !== undefined
       ? Boolean(options.enforce)

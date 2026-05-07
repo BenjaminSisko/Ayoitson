@@ -1,7 +1,12 @@
-const dns = require('dns').promises;
-const fs = require('fs');
-const net = require('net');
-const path = require('path');
+import type { SafeFsPath } from './path-validator';
+
+const dns = require('dns').promises as typeof import('dns').promises;
+const fs = require('fs') as typeof import('fs');
+const net = require('net') as typeof import('net');
+const path = require('path') as typeof import('path');
+const { validatePath } = require('./path-validator') as {
+  validatePath(input: string, baseDir?: string): SafeFsPath;
+};
 
 const DEFAULT_TIMEOUT_MS = 30 * 1000;
 const DEFAULT_MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
@@ -13,7 +18,9 @@ const SENSITIVE_HEADERS = new Set([
 ]);
 
 class HttpRequestError extends Error {
-  constructor(message, details = {}) {
+  details: HttpErrorDetails;
+
+  constructor(message: string, details: HttpErrorDetails = {}) {
     super(message);
     this.name = 'HttpRequestError';
     this.details = details;
@@ -24,15 +31,72 @@ class HttpRequestError extends Error {
   }
 }
 
-async function httpGet(url, opts = {}) {
+type HeaderMap = Record<string, string>;
+type HeaderInput = NonNullable<RequestInit['headers']> | HeaderMap;
+
+type AddressRecord = {
+  address: string;
+  family: number;
+};
+
+type AllowlistEntry = {
+  protocol?: string;
+  hostname: string;
+  port?: string;
+  includeSubdomains?: boolean;
+};
+
+type HttpRequestOptions = {
+  allowlist?: Array<string | URL | AllowlistEntry>;
+  allowPrivateNetwork?: boolean;
+  body?: RequestInit['body'];
+  databaseDir?: string;
+  fetchImpl?: typeof fetch;
+  headers?: HeaderInput;
+  json?: unknown;
+  maxBytes?: number;
+  method?: string;
+  resolveHost?: (
+    hostname: string
+  ) => Promise<string | AddressRecord | Array<string | AddressRecord>>;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+};
+
+type HttpErrorDetails = Record<string, unknown> & {
+  cause?: unknown;
+};
+
+type HttpResponse = {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  url: string;
+  headers: HeaderMap;
+  body: Buffer;
+  text: string;
+  data: unknown;
+};
+
+async function httpGet(
+  url: string | URL,
+  opts: HttpRequestOptions = {}
+): Promise<HttpResponse> {
   return httpRequest('GET', url, opts);
 }
 
-async function httpPost(url, opts = {}) {
+async function httpPost(
+  url: string | URL,
+  opts: HttpRequestOptions = {}
+): Promise<HttpResponse> {
   return httpRequest(opts.method || 'POST', url, opts);
 }
 
-async function httpRequest(method, url, opts = {}) {
+async function httpRequest(
+  method: string,
+  url: string | URL,
+  opts: HttpRequestOptions = {}
+): Promise<HttpResponse> {
   const requestUrl = parseHttpUrl(url);
   const controller = new AbortController();
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -67,7 +131,7 @@ async function httpRequest(method, url, opts = {}) {
     }
 
     if (controller.signal.aborted) {
-      const reason = controller.signal.reason;
+      const reason = controller.signal.reason as Error | undefined;
       const message =
         reason && reason.message ? reason.message : 'HTTP request aborted';
       throw attachRequestDetails(
@@ -90,8 +154,12 @@ async function httpRequest(method, url, opts = {}) {
   }
 }
 
-function buildFetchInit(method, opts, signal) {
-  const headers = { ...(opts.headers || {}) };
+function buildFetchInit(
+  method: string,
+  opts: HttpRequestOptions,
+  signal: AbortSignal
+): RequestInit {
+  const headers = normalizeHeaders(opts.headers);
   let body = opts.body;
 
   if (typeof opts.json !== 'undefined') {
@@ -110,7 +178,7 @@ function buildFetchInit(method, opts, signal) {
   };
 }
 
-function buildHttpResponse(response, body) {
+function buildHttpResponse(response: Response, body: Buffer): HttpResponse {
   const headers = Object.fromEntries(response.headers.entries());
   const contentType = response.headers.get('content-type') || '';
   const text = body.toString('utf8');
@@ -135,7 +203,10 @@ function buildHttpResponse(response, body) {
   };
 }
 
-async function validateOutboundUrl(url, opts = {}) {
+async function validateOutboundUrl(
+  url: string | URL,
+  opts: HttpRequestOptions = {}
+): Promise<void> {
   const parsed = parseHttpUrl(url);
   const hostname = normalizeHostname(parsed.hostname);
   const addresses = await resolveAddresses(hostname, opts);
@@ -162,7 +233,11 @@ async function validateOutboundUrl(url, opts = {}) {
   }
 }
 
-async function rejectManualRedirect(response, requestUrl, opts) {
+async function rejectManualRedirect(
+  response: Response,
+  requestUrl: URL,
+  opts: HttpRequestOptions
+): Promise<void> {
   if (response.status < 300 || response.status >= 400) {
     return;
   }
@@ -182,7 +257,11 @@ async function rejectManualRedirect(response, requestUrl, opts) {
   );
 }
 
-async function readLimitedBody(response, maxBytes, abortRequest) {
+async function readLimitedBody(
+  response: Response,
+  maxBytes: number,
+  abortRequest: () => void
+): Promise<Buffer> {
   const contentLength = Number(response.headers.get('content-length'));
   if (Number.isFinite(contentLength) && contentLength > maxBytes) {
     abortRequest();
@@ -196,7 +275,7 @@ async function readLimitedBody(response, maxBytes, abortRequest) {
   }
 
   const reader = response.body.getReader();
-  const chunks = [];
+  const chunks: Buffer[] = [];
   let total = 0;
 
   while (true) {
@@ -220,7 +299,10 @@ async function readLimitedBody(response, maxBytes, abortRequest) {
   return Buffer.concat(chunks, total);
 }
 
-async function resolveAddresses(hostname, opts = {}) {
+async function resolveAddresses(
+  hostname: string,
+  opts: HttpRequestOptions = {}
+): Promise<AddressRecord[]> {
   if (net.isIP(hostname)) {
     return [{ address: hostname, family: net.isIP(hostname) }];
   }
@@ -239,13 +321,13 @@ async function resolveAddresses(hostname, opts = {}) {
   });
 }
 
-function isAllowedUrl(url, opts = {}) {
+function isAllowedUrl(url: URL, opts: HttpRequestOptions = {}): boolean {
   const allowlist = buildAllowlist(opts);
 
   return allowlist.some((entry) => matchesAllowlistEntry(url, entry));
 }
 
-function buildAllowlist(opts = {}) {
+function buildAllowlist(opts: HttpRequestOptions = {}): AllowlistEntry[] {
   const entries = [
     { hostname: 'plex.tv', includeSubdomains: true },
     ...readConfiguredPlexServerUris(opts.databaseDir).map((uri) =>
@@ -259,15 +341,24 @@ function buildAllowlist(opts = {}) {
     );
   }
 
-  return entries.filter(Boolean);
+  return entries.filter(Boolean) as AllowlistEntry[];
 }
 
 function readConfiguredPlexServerUris(
-  databaseDir = process.env.AYOITSON_DATABASE || process.env.DATABASE
-) {
+  databaseDir: string | undefined = process.env.AYOITSON_DATABASE ||
+    process.env.DATABASE
+): string[] {
   const baseDir = databaseDir || path.join(process.cwd(), '.ayoitson');
-  const serverPath = path.join(baseDir, 'plex-servers.json');
+  const resolvedBaseDir = path.resolve(baseDir);
+  const serverPath = validatePath(
+    path.join(resolvedBaseDir, 'plex-servers.json'),
+    resolvedBaseDir
+  );
 
+  return readConfiguredPlexServerUrisFile(serverPath);
+}
+
+function readConfiguredPlexServerUrisFile(serverPath: SafeFsPath): string[] {
   if (!fs.existsSync(serverPath)) {
     return [];
   }
@@ -278,13 +369,17 @@ function readConfiguredPlexServerUris(
       return [];
     }
 
-    return servers.map((server) => server && server.uri).filter(Boolean);
+    return servers
+      .map((server: { uri?: unknown } | null) => server && server.uri)
+      .filter((uri: unknown): uri is string => typeof uri === 'string');
   } catch (err) {
     return [];
   }
 }
 
-function normalizeAllowlistEntry(entry) {
+function normalizeAllowlistEntry(
+  entry: string | URL | AllowlistEntry | null | undefined
+): AllowlistEntry | null {
   if (!entry) {
     return null;
   }
@@ -307,7 +402,7 @@ function normalizeAllowlistEntry(entry) {
   return urlToAllowlistEntry(url);
 }
 
-function urlToAllowlistEntry(url) {
+function urlToAllowlistEntry(url: URL): AllowlistEntry {
   return {
     protocol: url.protocol,
     hostname: normalizeHostname(url.hostname),
@@ -315,7 +410,7 @@ function urlToAllowlistEntry(url) {
   };
 }
 
-function matchesAllowlistEntry(url, entry) {
+function matchesAllowlistEntry(url: URL, entry: AllowlistEntry): boolean {
   if (entry.protocol && url.protocol !== entry.protocol) {
     return false;
   }
@@ -325,13 +420,13 @@ function matchesAllowlistEntry(url, entry) {
   }
 
   const hostname = normalizeHostname(url.hostname);
-  return (
+  return Boolean(
     hostname === entry.hostname ||
     (entry.includeSubdomains && hostname.endsWith(`.${entry.hostname}`))
   );
 }
 
-function normalizeHostname(hostname) {
+function normalizeHostname(hostname: string): string {
   const value = String(hostname).toLowerCase();
 
   if (value.startsWith('[') && value.endsWith(']')) {
@@ -341,7 +436,7 @@ function normalizeHostname(hostname) {
   return value;
 }
 
-function parseHttpUrl(url) {
+function parseHttpUrl(url: string | URL): URL {
   const parsed = url instanceof URL ? url : new URL(url);
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -353,7 +448,7 @@ function parseHttpUrl(url) {
   return parsed;
 }
 
-function isPrivateAddress(address) {
+function isPrivateAddress(address: string): boolean {
   if (isPrivateMappedIpv4(address)) {
     return true;
   }
@@ -370,13 +465,14 @@ function isPrivateAddress(address) {
   return true;
 }
 
-function isPrivateMappedIpv4(address) {
+function isPrivateMappedIpv4(address: string): boolean {
   const match = address.toLowerCase().match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  return Boolean(match && isPrivateIpv4(match[1]));
+  const mappedAddress = match?.[1];
+  return Boolean(mappedAddress && isPrivateIpv4(mappedAddress));
 }
 
-function isPrivateIpv4(address) {
-  const [a, b] = address.split('.').map((part) => Number(part));
+function isPrivateIpv4(address: string): boolean {
+  const [a = NaN, b = NaN] = address.split('.').map((part) => Number(part));
 
   return (
     a === 0 ||
@@ -389,7 +485,7 @@ function isPrivateIpv4(address) {
   );
 }
 
-function isPrivateIpv6(address) {
+function isPrivateIpv6(address: string): boolean {
   const value = address.toLowerCase();
 
   return (
@@ -404,31 +500,47 @@ function isPrivateIpv6(address) {
   );
 }
 
-function redactHeaders(headers = {}) {
-  const entries =
-    typeof Headers !== 'undefined' && headers instanceof Headers
-      ? headers.entries()
-      : Object.entries(headers);
-  const redacted = {};
+function normalizeHeaders(headers: HeaderInput = {}): HeaderMap {
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(
+      headers.map(([name, value]) => [name, String(value)])
+    );
+  }
+
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [name, String(value)])
+  );
+}
+
+function redactHeaders(headers: HeaderInput = {}): HeaderMap {
+  const entries = Object.entries(normalizeHeaders(headers));
+  const redacted: HeaderMap = {};
 
   for (const [name, value] of entries) {
     redacted[name] = SENSITIVE_HEADERS.has(String(name).toLowerCase())
       ? REDACTED
-      : value;
+      : String(value);
   }
 
   return redacted;
 }
 
-function hasHeader(headers, target) {
+function hasHeader(headers: HeaderMap, target: string): boolean {
   return Object.keys(headers).some((name) => name.toLowerCase() === target);
 }
 
-function getFetch(opts = {}) {
+function getFetch(opts: HttpRequestOptions = {}): typeof fetch {
   return opts.fetchImpl || fetch;
 }
 
-function linkAbortSignal(sourceSignal, controller) {
+function linkAbortSignal(
+  sourceSignal: AbortSignal | undefined,
+  controller: AbortController
+): () => void {
   if (!sourceSignal) {
     return () => undefined;
   }
@@ -444,7 +556,12 @@ function linkAbortSignal(sourceSignal, controller) {
   return () => sourceSignal.removeEventListener('abort', abort);
 }
 
-function attachRequestDetails(error, method, url, opts = {}) {
+function attachRequestDetails(
+  error: HttpRequestError,
+  method: string,
+  url: URL,
+  opts: HttpRequestOptions = {}
+): HttpRequestError {
   error.details = {
     ...error.details,
     request: {
