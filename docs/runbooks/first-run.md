@@ -13,6 +13,12 @@ node scripts/first-run.js
 
 Copy the printed key. You will not see it again.
 
+The browser setup endpoint (`POST /api/auth/setup`) is loopback-only by
+default so a fresh install cannot be claimed by the first remote client that
+reaches it. Use the CLI flow above on the Ayoitson host. For deliberate remote
+provisioning, set `AYOITSON_EXPOSE_WEB_SETUP=1` for that setup run only, then
+remove it.
+
 ## What the script does
 
 1. Opens the SQLite database at `${AYOITSON_DATABASE}` (default

@@ -96,6 +96,9 @@ export interface paths {
     /**
      * First-run setup
      * @description Creates the initial API key. Returns 409 once any active key exists.
+     *     Web setup is loopback-only by default; use `scripts/first-run.js` on
+     *     the host or deliberately set `AYOITSON_EXPOSE_WEB_SETUP=1` for remote
+     *     provisioning.
      */
     post: {
       parameters: {
@@ -121,6 +124,7 @@ export interface paths {
             'application/json': components['schemas']['CreatedKey'];
           };
         };
+        403: components['responses']['Forbidden'];
         409: components['responses']['Conflict'];
         503: components['responses']['ServiceUnavailable'];
       };

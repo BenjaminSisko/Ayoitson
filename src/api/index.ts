@@ -74,8 +74,9 @@ function compose(deps: any, options: { requireApiKey?: MiddlewareLike } = {}) {
   // control-plane routes, so they stay outside the API key auth boundary.
   router.use(providerModule.createRouter(deps));
 
-  // First-run setup: gated internally by the route (returns 410 once a key
-  // exists). No auth at the router seam.
+  // First-run setup: no API-key auth at the router seam because it bootstraps
+  // the first key, but index.ts gates `/api/auth/setup` to loopback by default
+  // before this router is reached.
   router.use('/api/auth', authModule.createRouter(deps));
 
   // Temporary AngularJS UI compatibility aliases. Mounted before the redesigned

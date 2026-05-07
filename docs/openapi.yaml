@@ -59,7 +59,11 @@ paths:
     post:
       tags: [auth]
       summary: First-run setup
-      description: Creates the initial API key. Returns 409 once any active key exists.
+      description: |
+        Creates the initial API key. Returns 409 once any active key exists.
+        Web setup is loopback-only by default; use `scripts/first-run.js` on
+        the host or deliberately set `AYOITSON_EXPOSE_WEB_SETUP=1` for remote
+        provisioning.
       security: []
       requestBody:
         required: false
@@ -75,6 +79,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CreatedKey' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 

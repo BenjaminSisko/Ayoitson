@@ -3,6 +3,7 @@ const fs = require('fs');
 const express = require('express');
 const path = require('path');
 const { httpGet } = require('../lib/http');
+const { apiError, INTERNAL } = require('../lib/errors');
 
 /**
  * Manager a cache in disk for external images.
@@ -72,7 +73,7 @@ class CacheImageService {
         res.status(200).send({ msg: 'Cache Image are Cleared' });
       } catch (error) {
         console.error(error);
-        res.status(500).send('error');
+        apiError(res, INTERNAL, 'Cache image clear failed');
       }
     });
 

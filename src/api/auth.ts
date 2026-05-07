@@ -4,10 +4,12 @@
 // First-run setup endpoint. The actual API-key issuance lives in
 // `scripts/first-run.js` (a separate operator-side flow Lane Epsilon owns)
 // — this route exists as the documented place a deployment automation tool
-// can hit during initial provisioning. Once any active key exists we return
-// 410 Gone so this endpoint is no longer a usable foothold.
+// can hit during initial provisioning. index.ts keeps this web path loopback
+// only by default; deliberate remote provisioning must opt in with
+// AYOITSON_EXPOSE_WEB_SETUP=1. Once any active key exists we return 409
+// Conflict so this endpoint is no longer a usable foothold.
 //
-//   POST /api/auth/setup     -> 201 with key (first run) or 410 (already set up)
+//   POST /api/auth/setup     -> 201 with key (first run) or 409 (already set up)
 //
 // — Claude (Anthropic), Lane Alpha · 2026-05-06
 

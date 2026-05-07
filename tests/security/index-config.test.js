@@ -35,6 +35,9 @@ describe('Phase 1 upload and body parser hardening', () => {
   test('Phase 4 security middleware is wired in', () => {
     const source = indexSource();
     expect(source).toContain("require('./src/middleware/auth')");
+    expect(source).toContain(
+      "require('./src/middleware/first-run-setup-guard')"
+    );
     expect(source).toContain("require('./src/middleware/helmet')");
     expect(source).toContain("require('./src/middleware/cors')");
     expect(source).toContain("require('./src/middleware/rate-limit')");
@@ -45,5 +48,23 @@ describe('Phase 1 upload and body parser hardening', () => {
     expect(source).toContain("app.use('/api', authFailureLimiter)");
     expect(source).toContain('apiCompose.compose');
     expect(source).toContain('requireApiKey');
+  });
+
+  test('auth edge routes are mounted behind security gates', () => {
+    const source = indexSource();
+    expect(source).toContain(
+      "app.use('/api/auth/setup', createFirstRunSetupGuard())"
+    );
+    expect(source).toContain("app.use('/api/events', requireApiKey)");
+    expect(source).toContain(
+      "app.use('/api/cache/images', requireApiKey, cacheImageService.apiRouters())"
+    );
+
+    expect(source.indexOf("app.use('/api', authFailureLimiter)")).toBeLessThan(
+      source.indexOf("app.use('/api/events', requireApiKey)")
+    );
+    expect(
+      source.indexOf("app.use('/api/events', requireApiKey)")
+    ).toBeLessThan(source.indexOf('eventService.setup(app)'));
   });
 });

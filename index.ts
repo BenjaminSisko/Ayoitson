@@ -23,6 +23,9 @@ const { debounce } = require('./src/lib/debounce');
 const { openAyoitsonDatabase } = require('./src/storage/sqlite');
 const { createAuthMiddleware } = require('./src/middleware/auth');
 const {
+  createFirstRunSetupGuard,
+} = require('./src/middleware/first-run-setup-guard');
+const {
   createAuthFailureLimiter,
   createStreamLimiter,
 } = require('./src/middleware/rate-limit');
@@ -334,8 +337,6 @@ let app = express();
 // host-header reflection (src/hdhr.js).
 app.set('trust proxy', 'loopback,linklocal,uniquelocal');
 
-eventService.setup(app);
-
 // --- Phase 4 security baseline (Lane Epsilon) ---
 // CORS deny-by-default runs first so cross-origin preflights never reach
 // further middleware. helmet sets CSP / HSTS / X-Frame-Options /
@@ -405,6 +406,9 @@ app.use('/custom.css', express.static(path.join(databaseDir, 'custom.css')));
 // probes against the api_keys store cost the attacker — `skipSuccessfulRequests`
 // in the limiter ensures only failed responses are counted.
 app.use('/api', authFailureLimiter);
+app.use('/api/auth/setup', createFirstRunSetupGuard());
+app.use('/api/events', requireApiKey);
+eventService.setup(app);
 app.use(
   apiCompose.compose(
     {
@@ -422,7 +426,7 @@ app.use(
     { requireApiKey }
   )
 );
-app.use('/api/cache/images', cacheImageService.apiRouters());
+app.use('/api/cache/images', requireApiKey, cacheImageService.apiRouters());
 app.use('/' + fontAwesome, express.static(path.join(databaseDir, fontAwesome)));
 app.use('/' + bootstrap, express.static(path.join(databaseDir, bootstrap)));
 
