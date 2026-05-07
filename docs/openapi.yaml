@@ -25,6 +25,7 @@ tags:
   - name: uploads
   - name: auth
   - name: audit
+  - name: admin
   - name: health
   - name: version
 
@@ -149,6 +150,32 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AuditLogResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/admin/backup:
+    get:
+      tags: [admin]
+      summary: Download SQLite backup snapshot
+      description: |
+        Streams a point-in-time SQLite `.backup` snapshot. Requires a valid
+        API key with `*`, `admin`, or `admin:backup` scope.
+      responses:
+        '200':
+          description: SQLite database backup
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+              description: Attachment filename for the SQLite backup.
+            Cache-Control:
+              schema: { type: string }
+              description: Always `no-store`.
+          content:
+            application/vnd.sqlite3:
+              schema:
+                type: string
+                format: binary
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /api/channels:

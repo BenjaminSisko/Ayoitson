@@ -39,6 +39,7 @@ const healthModule = require('./health');
 const authModule = require('./auth');
 const apiKeysModule = require('./api-keys');
 const auditModule = require('./audit');
+const adminModule = require('./admin');
 const uploadModule = require('./upload');
 const versionModule = require('./version');
 const legacyCompatModule = require('./legacy-compat');
@@ -90,6 +91,7 @@ function compose(deps: any, options: { requireApiKey?: MiddlewareLike } = {}) {
   // future change can swap auth/scope/limits per resource without rewiring.
   router.use('/api/api-keys', requireApiKey, apiKeysModule.createRouter(deps));
   router.use('/api/audit-log', requireApiKey, auditModule.createRouter(deps));
+  router.use('/api/admin', requireApiKey, adminModule.createRouter(deps));
   router.use('/api/channels', requireApiKey, channelsModule.createRouter(deps));
   router.use(
     '/api/plex-servers',
@@ -127,6 +129,7 @@ module.exports = {
     auth: authModule,
     apiKeys: apiKeysModule,
     audit: auditModule,
+    admin: adminModule,
     upload: uploadModule,
     version: versionModule,
     legacyCompat: legacyCompatModule,

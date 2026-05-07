@@ -288,6 +288,53 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/admin/backup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download SQLite backup snapshot
+     * @description Streams a point-in-time SQLite `.backup` snapshot. Requires a valid
+     *     API key with `*`, `admin`, or `admin:backup` scope.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description SQLite database backup */
+        200: {
+          headers: {
+            /** @description Attachment filename for the SQLite backup. */
+            'Content-Disposition'?: string;
+            /** @description Always `no-store`. */
+            'Cache-Control'?: string;
+            [name: string]: unknown;
+          };
+          content: {
+            'application/vnd.sqlite3': string;
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        503: components['responses']['ServiceUnavailable'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/channels': {
     parameters: {
       query?: never;

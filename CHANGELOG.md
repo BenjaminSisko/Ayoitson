@@ -10,6 +10,8 @@ All notable Ayoitson changes are tracked here.
   development mkcert helper, audit log API, blocking security workflow,
   Dependabot config, CycloneDX SBOM generation, and cosign keyless signing for
   release artifacts.
+- SQLite backup/restore runbook, `npm run backup` wrapper, and authenticated
+  `GET /api/admin/backup` database snapshot export.
 
 ### Changed
 

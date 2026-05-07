@@ -426,6 +426,7 @@ app.use(
       eventService,
       ffmpegSettingsService,
       apiKeyDb,
+      sqliteDb: db.sqlite,
       auditLogger,
     },
     { requireApiKey }

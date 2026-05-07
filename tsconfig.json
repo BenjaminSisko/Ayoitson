@@ -17,6 +17,7 @@
   },
   "include": [
     "index.ts",
+    "scripts/backup-sqlite.ts",
     "scripts/migrate-diskdb-to-sqlite.ts",
     "src/**/*.ts",
     "src/**/*.js"

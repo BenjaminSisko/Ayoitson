@@ -118,6 +118,7 @@ describe('Phase 4 API auth baseline', () => {
       ['post', '/api/api-keys'],
       ['delete', '/api/api-keys/fixture'],
       ['get', '/api/audit-log'],
+      ['get', '/api/admin/backup'],
       ['get', '/api/settings/ffmpeg/known-paths'],
     ];
 
