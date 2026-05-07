@@ -14,7 +14,7 @@ const plexServerDbSourcePath = path.join(
   '..',
   'src',
   'dao',
-  'plex-server-db.js'
+  'plex-server-db.ts'
 );
 
 function clone(value) {

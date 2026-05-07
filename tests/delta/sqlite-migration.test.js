@@ -58,7 +58,11 @@ describe('Phase 3 diskdb to SQLite migration', () => {
       );
 
       const dao = new PlexServerDAO(db, { masterKey });
-      expect(dao.getDecrypted('synthetic-plex').accessToken).toBe(
+      const storedServer = dao.find('synthetic-plex');
+      expect(storedServer.accessTokenEncrypted).not.toContain(
+        'FIXTURE_TOKEN_REDACTED'
+      );
+      expect(dao.decryptForOutbound('synthetic-plex').accessToken).toBe(
         'FIXTURE_TOKEN_REDACTED'
       );
       expect(dao.listPublic()[0]).not.toHaveProperty('accessToken');

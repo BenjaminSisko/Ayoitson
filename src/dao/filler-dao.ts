@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { v4: uuidv4 } = require('uuid');
 const { jsonParse, jsonStringify } = require('../storage/sqlite');
 
@@ -67,9 +68,7 @@ class FillerDAO {
         console.log(
           `Updating channel ${channelRef.number} , remove filler: ${id}`
         );
-        const channel = await this.channelService.getChannel(
-          channelRef.number
-        );
+        const channel = await this.channelService.getChannel(channelRef.number);
         channel.fillerCollections = (channel.fillerCollections || []).filter(
           (collection) => collection.id !== id
         );

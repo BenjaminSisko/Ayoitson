@@ -1,3 +1,4 @@
+// @ts-nocheck
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -459,10 +460,14 @@ class PlexServersCollection {
   }
 
   readRows() {
-    return this.plexServerDao.listDecrypted().map((server) => ({
-      ...server,
-      _id: server.name,
-    }));
+    return this.plexServerDao
+      .list()
+      .map((server) => this.plexServerDao.decryptForOutbound(server))
+      .filter(Boolean)
+      .map((server) => ({
+        ...server,
+        _id: server.name,
+      }));
   }
 }
 
@@ -638,7 +643,9 @@ function matchesQuery(row, query = {}) {
   if (!query || Object.keys(query).length === 0) {
     return true;
   }
-  return Object.entries(query).every(([key, expected]) => row[key] === expected);
+  return Object.entries(query).every(
+    ([key, expected]) => row[key] === expected
+  );
 }
 
 function clone(value) {

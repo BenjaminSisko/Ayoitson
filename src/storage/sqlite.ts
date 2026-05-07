@@ -1,12 +1,37 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs') as typeof import('fs');
+const path = require('path') as typeof import('path');
 const Database = require('better-sqlite3');
 
 const DEFAULT_DATA_DIR = '.ayoitson';
 const DEFAULT_DB_FILE = 'db.sqlite';
 const DEFAULT_MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
 
-function openAyoitsonDatabase(options = {}) {
+type SqliteDatabase = {
+  backup(destination: string): Promise<void>;
+  close(): void;
+  exec(sql: string): void;
+  pragma(sql: string): unknown;
+  prepare(sql: string): {
+    all(...params: unknown[]): Array<Record<string, unknown>>;
+    get(...params: unknown[]): Record<string, unknown> | undefined;
+    run(...params: unknown[]): unknown;
+  };
+  transaction<T>(fn: () => T): () => T;
+};
+
+type OpenDatabaseOptions = {
+  databaseDir?: string;
+  databasePath?: string;
+  fileMustExist?: boolean;
+  memory?: boolean;
+  migrate?: boolean;
+  migrationsDir?: string;
+  readonly?: boolean;
+};
+
+function openAyoitsonDatabase(
+  options: OpenDatabaseOptions = {}
+): SqliteDatabase {
   const dbPath = resolveDatabasePath(options);
 
   if (dbPath !== ':memory:') {
@@ -27,7 +52,7 @@ function openAyoitsonDatabase(options = {}) {
   return db;
 }
 
-function resolveDatabasePath(options = {}) {
+function resolveDatabasePath(options: OpenDatabaseOptions = {}): string {
   if (options.memory) {
     return ':memory:';
   }
@@ -44,7 +69,10 @@ function resolveDatabasePath(options = {}) {
   return path.join(databaseDir, DEFAULT_DB_FILE);
 }
 
-function runMigrations(db, migrationsDir = DEFAULT_MIGRATIONS_DIR) {
+function runMigrations(
+  db: SqliteDatabase,
+  migrationsDir = DEFAULT_MIGRATIONS_DIR
+): void {
   const files = fs
     .readdirSync(migrationsDir)
     .filter((file) => /^\d+_.*\.sql$/.test(file))
@@ -64,7 +92,7 @@ function runMigrations(db, migrationsDir = DEFAULT_MIGRATIONS_DIR) {
   }
 }
 
-function getAppliedVersions(db) {
+function getAppliedVersions(db: SqliteDatabase): Set<number> {
   const table = db
     .prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schema_version'"
@@ -83,29 +111,32 @@ function getAppliedVersions(db) {
   );
 }
 
-function ensureSchemaVersion(db, version) {
+function ensureSchemaVersion(db: SqliteDatabase, version: number): void {
   db.prepare('INSERT OR IGNORE INTO schema_version (version) VALUES (?)').run(
     version
   );
 }
 
-function jsonStringify(value) {
+function jsonStringify(value: unknown): string {
   return JSON.stringify(value ?? {});
 }
 
-function jsonParse(value, fallback = {}) {
+function jsonParse<T = unknown>(value: unknown, fallback = {} as T): T {
   if (typeof value !== 'string' || value.length === 0) {
     return fallback;
   }
 
-  return JSON.parse(value);
+  return JSON.parse(value) as T;
 }
 
-function transaction(db, fn) {
+function transaction<T>(db: SqliteDatabase, fn: () => T): T {
   return db.transaction(fn)();
 }
 
-async function backupDatabase(db, destination) {
+async function backupDatabase(
+  db: SqliteDatabase,
+  destination: string
+): Promise<string> {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   await db.backup(destination);
   return destination;

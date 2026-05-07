@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { jsonParse, jsonStringify } = require('../storage/sqlite');
 
 class ChannelDAO {

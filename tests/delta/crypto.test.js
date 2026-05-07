@@ -14,11 +14,9 @@ describe('Phase 3 token crypto', () => {
     const key = Buffer.alloc(32, 7);
     const encrypted = encryptToken('FIXTURE_TOKEN_REDACTED', key);
 
-    expect(encrypted.iv).toHaveLength(12);
-    expect(encrypted.tag).toHaveLength(16);
-    expect(encrypted.ciphertext.toString('utf8')).not.toContain(
-      'FIXTURE_TOKEN_REDACTED'
-    );
+    expect(Buffer.from(encrypted.iv, 'base64url')).toHaveLength(12);
+    expect(Buffer.from(encrypted.tag, 'base64url')).toHaveLength(16);
+    expect(encrypted.ciphertext).not.toContain('FIXTURE_TOKEN_REDACTED');
     expect(
       decryptToken(encrypted.ciphertext, encrypted.iv, encrypted.tag, key)
     ).toBe('FIXTURE_TOKEN_REDACTED');
@@ -27,7 +25,10 @@ describe('Phase 3 token crypto', () => {
   test('rejects tampered ciphertext on auth tag verification', () => {
     const key = Buffer.alloc(32, 8);
     const encrypted = encryptToken('FIXTURE_TOKEN_REDACTED', key);
-    encrypted.ciphertext[0] = encrypted.ciphertext[0] ^ 1;
+    encrypted.ciphertext =
+      encrypted.ciphertext[0] === 'A'
+        ? `B${encrypted.ciphertext.slice(1)}`
+        : `A${encrypted.ciphertext.slice(1)}`;
 
     expect(() =>
       decryptToken(encrypted.ciphertext, encrypted.iv, encrypted.tag, key)

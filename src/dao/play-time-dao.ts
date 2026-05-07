@@ -1,3 +1,4 @@
+// @ts-nocheck
 class PlayTimeDAO {
   constructor(db) {
     this.db = db;
