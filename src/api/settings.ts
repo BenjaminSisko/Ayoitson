@@ -15,6 +15,8 @@
 
 const express = require('express');
 
+const { writeRequestAudit } = require('../lib/audit');
+const { listWellKnownFFmpegPaths } = require('../lib/ffmpeg-path-validator');
 const { apiError, VALIDATION_ERROR } = require('../lib/errors');
 const { asyncRoute, safeString } = require('./_helpers');
 
@@ -66,7 +68,13 @@ function settingsKey(section) {
 }
 
 function createRouter(deps) {
-  const { db, ffmpegSettingsService, eventService, xmltvInterval } = deps;
+  const {
+    db,
+    ffmpegSettingsService,
+    eventService,
+    xmltvInterval,
+    auditLogger,
+  } = deps;
   if (!db) throw new Error('createRouter(settings): db is required');
   if (!ffmpegSettingsService) {
     throw new Error(
@@ -74,6 +82,13 @@ function createRouter(deps) {
     );
   }
   const router = express.Router();
+
+  function getFfmpegState() {
+    if (typeof ffmpegSettingsService.getCurrentState === 'function') {
+      return ffmpegSettingsService.getCurrentState();
+    }
+    return null;
+  }
 
   // --- ffmpeg ---
 
@@ -84,12 +99,31 @@ function createRouter(deps) {
     })
   );
 
+  router.get(
+    '/ffmpeg/known-paths',
+    asyncRoute(async (_req, res) => {
+      res.send({ paths: listWellKnownFFmpegPaths() });
+    })
+  );
+
   router.put(
     '/ffmpeg',
     asyncRoute(async (req, res) => {
+      const before = getFfmpegState();
       const result = ffmpegSettingsService.update(req.body);
       if (typeof result.error !== 'undefined') {
         return apiError(res, VALIDATION_ERROR, result.error);
+      }
+      const after = getFfmpegState();
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'ffmpeg',
+        action: 'update',
+      });
+      if (before && after && before.ffmpegPath !== after.ffmpegPath) {
+        writeRequestAudit(auditLogger, req, 'ffmpeg.path.changed', {
+          oldPath: before.ffmpegPath,
+          newPath: after.ffmpegPath,
+        });
       }
       eventService.push('settings-update', {
         message: 'FFMPEG configuration updated.',
@@ -105,7 +139,19 @@ function createRouter(deps) {
     '/ffmpeg/reset',
     asyncRoute(async (req, res) => {
       try {
+        const before = getFfmpegState();
         const ffmpeg = ffmpegSettingsService.reset();
+        const after = getFfmpegState();
+        writeRequestAudit(auditLogger, req, 'settings.changed', {
+          section: 'ffmpeg',
+          action: 'reset',
+        });
+        if (before && after && before.ffmpegPath !== after.ffmpegPath) {
+          writeRequestAudit(auditLogger, req, 'ffmpeg.path.changed', {
+            oldPath: before.ffmpegPath,
+            newPath: after.ffmpegPath,
+          });
+        }
         eventService.push('settings-update', {
           message: 'FFMPEG configuration reset.',
           module: 'ffmpeg',
@@ -140,6 +186,10 @@ function createRouter(deps) {
     asyncRoute(async (req, res) => {
       const body = req.body || {};
       db['plex-settings'].update({ _id: body._id }, body);
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'plex',
+        action: 'update',
+      });
       eventService.push('settings-update', {
         message: 'Plex configuration updated.',
         module: 'plex',
@@ -159,6 +209,10 @@ function createRouter(deps) {
         { _id: existing._id },
         { ...PLEX_DEFAULTS, _id: existing._id }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'plex',
+        action: 'reset',
+      });
       eventService.push('settings-update', {
         message: 'Plex configuration reset.',
         module: 'plex',
@@ -203,6 +257,10 @@ function createRouter(deps) {
           enableImageCache: body.enableImageCache === true,
         }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'xmltv',
+        action: 'update',
+      });
       eventService.push('settings-update', {
         message: 'xmltv settings updated.',
         module: 'xmltv',
@@ -228,6 +286,10 @@ function createRouter(deps) {
         { _id: existing._id },
         { _id: existing._id, ...XMLTV_DEFAULTS }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'xmltv',
+        action: 'reset',
+      });
       eventService.push('settings-update', {
         message: 'xmltv settings reset.',
         module: 'xmltv',
@@ -257,6 +319,10 @@ function createRouter(deps) {
     asyncRoute(async (req, res) => {
       const body = req.body || {};
       db['hdhr-settings'].update({ _id: body._id }, body);
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'hdhr',
+        action: 'update',
+      });
       eventService.push('settings-update', {
         message: 'HDHR configuration updated.',
         module: 'hdhr',
@@ -276,6 +342,10 @@ function createRouter(deps) {
         { _id: existing._id },
         { _id: existing._id, ...HDHR_DEFAULTS }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'hdhr',
+        action: 'reset',
+      });
       eventService.push('settings-update', {
         message: 'HDHR configuration reset.',
         module: 'hdhr',

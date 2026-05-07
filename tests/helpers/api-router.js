@@ -94,6 +94,7 @@ function createMockDependencies(overrides = {}) {
       get: () => ({ ffmpegPath: 'ffmpeg' }),
       update: () => ({ ffmpeg: { ffmpegPath: 'ffmpeg' } }),
       reset: () => ({ ffmpegPath: 'ffmpeg' }),
+      getCurrentState: () => ({ ffmpegPath: 'ffmpeg' }),
     },
     ...overrides,
   };

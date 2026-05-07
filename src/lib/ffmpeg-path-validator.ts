@@ -2,6 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const FFMPEG_PATH_PATTERN = /^[A-Za-z0-9_./-]+$/;
+const WELL_KNOWN_FFMPEG_PATHS = Object.freeze([
+  '/usr/bin/ffmpeg',
+  '/usr/local/bin/ffmpeg',
+  '/opt/homebrew/bin/ffmpeg',
+  '/opt/local/bin/ffmpeg',
+  '/snap/bin/ffmpeg',
+]);
 
 type FFmpegPathValidationResult = {
   ok: boolean;
@@ -32,6 +39,13 @@ function validateFFmpegPath(input: unknown): FFmpegPathValidationResult {
     };
   }
 
+  if (path.basename(normalizedPath) !== 'ffmpeg') {
+    return {
+      ok: false,
+      error: 'ffmpeg path must point to an ffmpeg binary.',
+    };
+  }
+
   try {
     const stats = fs.statSync(normalizedPath);
     return {
@@ -55,9 +69,22 @@ function validateFFmpegPath(input: unknown): FFmpegPathValidationResult {
   }
 }
 
+function listWellKnownFFmpegPaths() {
+  return WELL_KNOWN_FFMPEG_PATHS.filter((candidate) =>
+    fs.existsSync(candidate)
+  );
+}
+
 module.exports = {
   FFMPEG_PATH_PATTERN,
+  WELL_KNOWN_FFMPEG_PATHS,
+  listWellKnownFFmpegPaths,
   validateFFmpegPath,
 };
 
-export { FFMPEG_PATH_PATTERN, validateFFmpegPath };
+export {
+  FFMPEG_PATH_PATTERN,
+  WELL_KNOWN_FFMPEG_PATHS,
+  listWellKnownFFmpegPaths,
+  validateFFmpegPath,
+};

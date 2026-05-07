@@ -248,6 +248,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/audit-log': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read recent audit log entries */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Recent audit entries */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AuditLogResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        503: components['responses']['ServiceUnavailable'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/channels': {
     parameters: {
       query?: never;
@@ -1256,6 +1296,45 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/settings/ffmpeg/known-paths': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List detected well-known FFmpeg paths */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Absolute FFmpeg paths detected on this host */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              paths: string[];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/settings/ffmpeg/reset': {
     parameters: {
       query?: never;
@@ -2067,6 +2146,27 @@ export interface components {
     };
     ApiKeyRevokeResult: {
       revoked: boolean;
+    };
+    AuditEntry: {
+      /** Format: date-time */
+      ts: string;
+      event: string;
+      actor?: {
+        [key: string]: unknown;
+      };
+      ip?: string;
+      userAgent?: string;
+      method?: string;
+      path?: string;
+      detail?: {
+        [key: string]: unknown;
+      };
+    } & {
+      [key: string]: unknown;
+    };
+    AuditLogResponse: {
+      path: string;
+      entries: components['schemas']['AuditEntry'][];
     };
     ChannelSummary: {
       number?: number;

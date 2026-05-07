@@ -20,6 +20,7 @@ const express = require('express');
 
 const Plex = require('../plex.js');
 const PlexServerDB = require('../dao/plex-server-db');
+const { writeRequestAudit } = require('../lib/audit');
 const { apiError, VALIDATION_ERROR, NOT_FOUND } = require('../lib/errors');
 const {
   asyncRoute,
@@ -42,7 +43,14 @@ async function probeServer(server) {
 }
 
 function createRouter(deps) {
-  const { db, channelService, fillerDB, customShowDB, eventService } = deps;
+  const {
+    db,
+    channelService,
+    fillerDB,
+    customShowDB,
+    eventService,
+    auditLogger,
+  } = deps;
   if (!db) throw new Error('createRouter(plex-servers): db is required');
   const plexServerDB = new PlexServerDB(
     channelService,
@@ -69,6 +77,10 @@ function createRouter(deps) {
         res
           .status(201)
           .send({ created: true, name: req.body && req.body.name });
+        writeRequestAudit(auditLogger, req, 'plex_server.added', {
+          name: req.body && req.body.name,
+          uri: req.body && req.body.uri,
+        });
         eventService.push('settings-update', {
           message: `Plex server ${req.body && req.body.name} added.`,
           module: 'plex-server',
@@ -114,6 +126,11 @@ function createRouter(deps) {
           modifiedPrograms,
           destroyedPrograms,
         });
+        writeRequestAudit(auditLogger, req, 'plex_server.updated', {
+          name,
+          modifiedPrograms,
+          destroyedPrograms,
+        });
         eventService.push('settings-update', {
           message: `Plex server ${name} updated. ${modifiedPrograms} programs modified, ${destroyedPrograms} programs deleted`,
           module: 'plex-server',
@@ -147,6 +164,9 @@ function createRouter(deps) {
       try {
         const report = await plexServerDB.deleteServer(name);
         res.send({ deleted: true, name, report });
+        writeRequestAudit(auditLogger, req, 'plex_server.removed', {
+          name,
+        });
         eventService.push('settings-update', {
           message: `Plex server ${name} removed.`,
           module: 'plex-server',

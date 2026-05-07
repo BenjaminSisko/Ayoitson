@@ -24,6 +24,7 @@ tags:
   - name: guide
   - name: uploads
   - name: auth
+  - name: audit
   - name: health
   - name: version
 
@@ -129,6 +130,24 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiKeyRevokeResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /api/audit-log:
+    get:
+      tags: [audit]
+      summary: Read recent audit log entries
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+      responses:
+        '200':
+          description: Recent audit entries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditLogResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
@@ -579,6 +598,23 @@ paths:
               schema: { type: object, additionalProperties: true }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/settings/ffmpeg/known-paths:
+    get:
+      tags: [settings]
+      summary: List detected well-known FFmpeg paths
+      responses:
+        '200':
+          description: Absolute FFmpeg paths detected on this host
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [paths]
+                properties:
+                  paths:
+                    type: array
+                    items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/settings/ffmpeg/reset:
     post:
       tags: [settings]
@@ -935,6 +971,27 @@ components:
       required: [revoked]
       properties:
         revoked: { type: boolean }
+    AuditEntry:
+      type: object
+      required: [ts, event]
+      properties:
+        ts: { type: string, format: date-time }
+        event: { type: string }
+        actor: { type: object, additionalProperties: true }
+        ip: { type: string }
+        userAgent: { type: string }
+        method: { type: string }
+        path: { type: string }
+        detail: { type: object, additionalProperties: true }
+      additionalProperties: true
+    AuditLogResponse:
+      type: object
+      required: [path, entries]
+      properties:
+        path: { type: string }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEntry' }
     ChannelSummary:
       type: object
       properties:

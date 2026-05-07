@@ -66,6 +66,7 @@ function createRuntimeDatabase(options = {}) {
 
   const runtimeDb = createDiskdbCompatDatabase(sqlite, {
     masterKey: options.masterKey,
+    auditLogger: options.auditLogger,
   });
   runtimeDb.path = databaseDir;
   runtimeDb._db.path = databaseDir;
@@ -105,7 +106,8 @@ function createDiskdbCompatDatabase(sqlite, options = {}) {
     _db: { path: options.databaseDir || DEFAULT_DATA_DIR },
     channels: new ChannelCollection(new ChannelDAO(sqlite)),
     'plex-servers': new PlexServersCollection(
-      new PlexServerDAO(sqlite, { masterKey: options.masterKey })
+      new PlexServerDAO(sqlite, { masterKey: options.masterKey }),
+      options.auditLogger
     ),
     'cache-images': new CacheImagesCollection(sqlite),
   };
@@ -398,8 +400,9 @@ class ChannelCollection {
 }
 
 class PlexServersCollection {
-  constructor(plexServerDao) {
+  constructor(plexServerDao, auditLogger) {
     this.plexServerDao = plexServerDao;
+    this.auditLogger = auditLogger;
     this.collectionName = 'plex-servers';
   }
 
@@ -462,7 +465,24 @@ class PlexServersCollection {
   readRows() {
     return this.plexServerDao
       .list()
-      .map((server) => this.plexServerDao.decryptForOutbound(server))
+      .map((server) => {
+        const decrypted = this.plexServerDao.decryptForOutbound(server);
+        if (
+          decrypted &&
+          decrypted.accessToken &&
+          this.auditLogger &&
+          typeof this.auditLogger.write === 'function'
+        ) {
+          this.auditLogger.write('token.read', {
+            actor: { type: 'system' },
+            detail: {
+              resource: 'plex-server',
+              name: decrypted.name,
+            },
+          });
+        }
+        return decrypted;
+      })
       .filter(Boolean)
       .map((server) => ({
         ...server,

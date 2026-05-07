@@ -22,6 +22,7 @@ const PlexServerDB = require('../dao/plex-server-db');
 const throttle = require('../services/throttle');
 const timeSlotsService = require('../services/time-slots-service');
 const randomSlotsService = require('../services/random-slots-service');
+const { writeRequestAudit } = require('../lib/audit');
 const { getInternalBaseUrl, getProviderBaseUrl } = require('../lib/url');
 const uploadModule = require('./upload');
 const { apiError, VALIDATION_ERROR, NOT_FOUND } = require('../lib/errors');
@@ -183,7 +184,20 @@ async function updatePlexServer(deps, server) {
 }
 
 function createSettingsRoutes(router, deps) {
-  const { db, ffmpegSettingsService, eventService, xmltvInterval } = deps;
+  const {
+    db,
+    ffmpegSettingsService,
+    eventService,
+    xmltvInterval,
+    auditLogger,
+  } = deps;
+
+  function getFfmpegState() {
+    if (typeof ffmpegSettingsService.getCurrentState === 'function') {
+      return ffmpegSettingsService.getCurrentState();
+    }
+    return null;
+  }
 
   router.get(
     '/ffmpeg-settings',
@@ -195,9 +209,21 @@ function createSettingsRoutes(router, deps) {
   router.put(
     '/ffmpeg-settings',
     asyncRoute(async (req, res) => {
+      const before = getFfmpegState();
       const result = ffmpegSettingsService.update(req.body);
       if (typeof result.error !== 'undefined') {
         return apiError(res, VALIDATION_ERROR, result.error);
+      }
+      const after = getFfmpegState();
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'ffmpeg',
+        action: 'update',
+      });
+      if (before && after && before.ffmpegPath !== after.ffmpegPath) {
+        writeRequestAudit(auditLogger, req, 'ffmpeg.path.changed', {
+          oldPath: before.ffmpegPath,
+          newPath: after.ffmpegPath,
+        });
       }
       pushEvent(eventService, 'settings-update', {
         message: 'FFMPEG configuration updated.',
@@ -211,8 +237,20 @@ function createSettingsRoutes(router, deps) {
 
   router.post(
     '/ffmpeg-settings',
-    asyncRoute(async (_req, res) => {
+    asyncRoute(async (req, res) => {
+      const before = getFfmpegState();
       const ffmpeg = ffmpegSettingsService.reset();
+      const after = getFfmpegState();
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'ffmpeg',
+        action: 'reset',
+      });
+      if (before && after && before.ffmpegPath !== after.ffmpegPath) {
+        writeRequestAudit(auditLogger, req, 'ffmpeg.path.changed', {
+          oldPath: before.ffmpegPath,
+          newPath: after.ffmpegPath,
+        });
+      }
       pushEvent(eventService, 'settings-update', {
         message: 'FFMPEG configuration reset.',
         module: 'ffmpeg',
@@ -240,6 +278,10 @@ function createSettingsRoutes(router, deps) {
           { _id: body._id || recordId(existing) },
           { ...body, _id: body._id || recordId(existing) }
         );
+        writeRequestAudit(auditLogger, req, 'settings.changed', {
+          section,
+          action: 'update',
+        });
         pushEvent(eventService, 'settings-update', {
           message: `${section} settings updated.`,
           module: section,
@@ -260,6 +302,10 @@ function createSettingsRoutes(router, deps) {
           { _id: body._id || recordId(existing) },
           { _id: body._id || recordId(existing), ...defaults }
         );
+        writeRequestAudit(auditLogger, req, 'settings.changed', {
+          section,
+          action: 'reset',
+        });
         pushEvent(eventService, 'settings-update', {
           message: `${section} settings reset.`,
           module: section,
@@ -292,6 +338,10 @@ function createSettingsRoutes(router, deps) {
           enableImageCache: body.enableImageCache === true,
         }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'xmltv',
+        action: 'update',
+      });
       pushEvent(eventService, 'settings-update', {
         message: 'xmltv settings updated.',
         module: 'xmltv',
@@ -317,6 +367,10 @@ function createSettingsRoutes(router, deps) {
         { _id: body._id || recordId(existing) },
         { _id: body._id || recordId(existing), ...XMLTV_DEFAULTS }
       );
+      writeRequestAudit(auditLogger, req, 'settings.changed', {
+        section: 'xmltv',
+        action: 'reset',
+      });
       pushEvent(eventService, 'settings-update', {
         message: 'xmltv settings reset.',
         module: 'xmltv',
@@ -339,6 +393,7 @@ function createRouter(deps) {
     customShowDB,
     eventService,
     m3uService,
+    auditLogger,
   } = deps;
   if (!db) throw new Error('createRouter(legacy-compat): db is required');
   if (!channelService) {
@@ -426,6 +481,10 @@ function createRouter(deps) {
         });
       }
       await channelService.saveChannel(number, body);
+      writeRequestAudit(auditLogger, req, 'channel.created', {
+        number,
+        name: body.name,
+      });
       res.status(201).send({ number });
     })
   );
@@ -441,6 +500,10 @@ function createRouter(deps) {
         });
       }
       await channelService.saveChannel(number, { ...body, number });
+      writeRequestAudit(auditLogger, req, 'channel.updated', {
+        number,
+        name: body.name,
+      });
       res.send({ number });
     })
   );
@@ -455,6 +518,7 @@ function createRouter(deps) {
         });
       }
       await channelService.deleteChannel(number);
+      writeRequestAudit(auditLogger, req, 'channel.deleted', { number });
       res.send({ number });
     })
   );
@@ -526,6 +590,11 @@ function createRouter(deps) {
           deps,
           req.body
         );
+        writeRequestAudit(auditLogger, req, 'plex_server.updated', {
+          name,
+          modifiedPrograms,
+          destroyedPrograms,
+        });
         pushEvent(eventService, 'settings-update', {
           message: `Plex server ${name} updated. ${modifiedPrograms} programs modified, ${destroyedPrograms} programs deleted`,
           module: 'plex-server',
@@ -558,6 +627,10 @@ function createRouter(deps) {
       try {
         const plexServerDB = createPlexServerDB(deps);
         await plexServerDB.addServer(req.body);
+        writeRequestAudit(auditLogger, req, 'plex_server.added', {
+          name: req.body && req.body.name,
+          uri: req.body && req.body.uri,
+        });
         pushEvent(eventService, 'settings-update', {
           message: `Plex server ${req.body && req.body.name} added.`,
           module: 'plex-server',
@@ -598,6 +671,7 @@ function createRouter(deps) {
       try {
         const plexServerDB = createPlexServerDB(deps);
         const report = await plexServerDB.deleteServer(name);
+        writeRequestAudit(auditLogger, req, 'plex_server.removed', { name });
         pushEvent(eventService, 'settings-update', {
           message: `Plex server ${name} removed.`,
           module: 'plex-server',

@@ -1,13 +1,13 @@
 // @ts-nocheck
 
 const express = require('express');
-const SSDP = require('node-ssdp').Server;
 const constants = require('./constants');
+const { createSsdpServer } = require('./lib/ssdp-server');
 
 module.exports = hdhr;
 
 function hdhr(db, channelDB) {
-  const server = new SSDP({
+  const server = createSsdpServer({
     location: {
       port: process.env.PORT,
       path: '/device.xml',

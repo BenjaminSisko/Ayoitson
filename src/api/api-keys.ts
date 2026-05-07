@@ -15,6 +15,7 @@
 const express = require('express');
 
 const apiKeyLib = require('../lib/api-keys');
+const { writeRequestAudit } = require('../lib/audit');
 const {
   apiError,
   VALIDATION_ERROR,
@@ -23,7 +24,7 @@ const {
 const { asyncRoute, requireBodyString } = require('./_helpers');
 
 function createRouter(deps) {
-  const { apiKeyDb } = deps || {};
+  const { apiKeyDb, auditLogger } = deps || {};
   const router = express.Router();
 
   function requireStore(res) {
@@ -51,6 +52,10 @@ function createRouter(deps) {
         });
       }
       const created = await apiKeyLib.createKey(apiKeyDb, name, ['*']);
+      writeRequestAudit(auditLogger, req, 'auth.key.created', {
+        keyId: created.metadata && created.metadata.id,
+        name: created.metadata && created.metadata.name,
+      });
       res.status(201).send(created);
     })
   );
@@ -65,7 +70,12 @@ function createRouter(deps) {
           field: 'id',
         });
       }
-      res.send(apiKeyLib.revokeKey(apiKeyDb, id));
+      const revoked = apiKeyLib.revokeKey(apiKeyDb, id);
+      writeRequestAudit(auditLogger, req, 'auth.key.revoked', {
+        keyId: id,
+        revoked: revoked && revoked.revoked === true,
+      });
+      res.send(revoked);
     })
   );
 

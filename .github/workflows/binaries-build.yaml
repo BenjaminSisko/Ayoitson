@@ -10,6 +10,9 @@ on:
 jobs:
   release-files:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -31,14 +34,41 @@ jobs:
         run: |
           docker run -v ./dist:/home/node/app/dist builder sh make_dist.sh
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in \
+            ./dist/ayoitson-win-x64.exe \
+            ./dist/ayoitson-win-x86.exe \
+            ./dist/ayoitson-linux-x64 \
+            ./dist/ayoitson-macos-x64
+          do
+            cosign sign-blob --yes \
+              --output-signature "${artifact}.sig" \
+              --output-certificate "${artifact}.pem" \
+              "${artifact}"
+          done
+
       - name: Upload Files
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ inputs.release }}
           files: |
             ./dist/ayoitson-win-x64.exe
+            ./dist/ayoitson-win-x64.exe.sig
+            ./dist/ayoitson-win-x64.exe.pem
             ./dist/ayoitson-win-x86.exe
+            ./dist/ayoitson-win-x86.exe.sig
+            ./dist/ayoitson-win-x86.exe.pem
             ./dist/ayoitson-linux-x64
+            ./dist/ayoitson-linux-x64.sig
+            ./dist/ayoitson-linux-x64.pem
             ./dist/ayoitson-macos-x64
+            ./dist/ayoitson-macos-x64.sig
+            ./dist/ayoitson-macos-x64.pem
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

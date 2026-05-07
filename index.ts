@@ -34,6 +34,8 @@ const { createHelmetMiddleware } = require('./src/middleware/helmet');
 const FileCacheService = require('./src/services/file-cache-service');
 const CacheImageService = require('./src/services/cache-image-service');
 const ChannelService = require('./src/services/channel-service');
+const { createAuditLogger } = require('./src/lib/audit');
+const { createAyoitsonServer } = require('./src/lib/server');
 
 const xmltv = require('./src/xmltv');
 const Plex = require('./src/plex');
@@ -131,10 +133,12 @@ if (!fs.existsSync(databaseDir)) {
 let fontAwesome = 'fontawesome-free-5.15.4-web';
 let bootstrap = 'bootstrap-4.4.1-dist';
 const reactDistDir = path.join(__dirname, 'web', 'dist');
+const auditLogger = createAuditLogger({ databaseDir });
 let db = createRuntimeDatabase({
   databaseDir,
   legacyDir: runtimeDirs.legacyDir,
   archiveLegacy: process.env.AYOITSON_ARCHIVE_LEGACY === '1',
+  auditLogger,
 });
 const channelDB = new ChannelDAO(db.sqlite);
 
@@ -351,7 +355,7 @@ app.use(createStreamLimiter());
 // API key store reuses the runtime SQLite database so api_keys live in
 // the same file as the rest of the operator's data.
 const apiKeyDb = openAyoitsonDatabase({ databaseDir });
-const requireApiKey = createAuthMiddleware(apiKeyDb);
+const requireApiKey = createAuthMiddleware(apiKeyDb, { auditLogger });
 const authFailureLimiter = createAuthFailureLimiter();
 
 app.use(
@@ -422,6 +426,7 @@ app.use(
       eventService,
       ffmpegSettingsService,
       apiKeyDb,
+      auditLogger,
     },
     { requireApiKey }
   )
@@ -501,8 +506,11 @@ app.get('*', (req: RequestLike, res: ResponseLike, next: NextLike) => {
   sendReactSpaIndex(res, next);
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`HTTP server running on port: http://*:${process.env.PORT}`);
+const { protocol, server } = createAyoitsonServer(app);
+server.listen(process.env.PORT, () => {
+  console.log(
+    `${protocol.toUpperCase()} server running on port: ${protocol}://*:${process.env.PORT}`
+  );
   let hdhrSettings = db['hdhr-settings'].find()[0];
   if (hdhrSettings.autoDiscovery === true) hdhr.ssdp.start();
 });

@@ -20,6 +20,14 @@ const { apiError, UNAUTHORIZED } = require('../lib/errors') as {
   apiError(res: ResponseLike, code: unknown, message: string): unknown;
   UNAUTHORIZED: unknown;
 };
+const { writeRequestAudit } = require('../lib/audit') as {
+  writeRequestAudit(
+    auditLogger: unknown,
+    req: RequestLike,
+    event: string,
+    detail?: Record<string, unknown>
+  ): boolean;
+};
 
 const HEADER = 'x-api-key';
 
@@ -45,6 +53,7 @@ type NextFunction = () => void;
 
 type AuthMiddlewareOptions = {
   bypass?: boolean;
+  auditLogger?: unknown;
 };
 
 function createAuthMiddleware(
@@ -77,6 +86,10 @@ function createAuthMiddleware(
 
     const candidate = req.get && req.get(HEADER);
     if (!candidate || typeof candidate !== 'string') {
+      req.authFailed = true;
+      writeRequestAudit(options.auditLogger, req, 'auth.failure', {
+        reason: 'missing-api-key',
+      });
       return apiError(res, UNAUTHORIZED, 'Missing X-API-Key header');
     }
 
@@ -85,12 +98,21 @@ function createAuthMiddleware(
       metadata = await verifyKey(db, candidate);
     } catch {
       // Failure to verify is treated as unauthorized; never leak details.
+      writeRequestAudit(options.auditLogger, req, 'auth.failure', {
+        reason: 'verification-error',
+      });
       metadata = null;
     }
 
     if (!metadata || metadata.revokedAt) {
       // Mark this request for the rate limiter to count as an auth failure.
       req.authFailed = true;
+      writeRequestAudit(options.auditLogger, req, 'auth.failure', {
+        reason:
+          metadata && metadata.revokedAt
+            ? 'revoked-api-key'
+            : 'invalid-api-key',
+      });
       return apiError(res, UNAUTHORIZED, 'Invalid API key');
     }
 

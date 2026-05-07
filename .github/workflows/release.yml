@@ -1,0 +1,51 @@
+name: Release SBOM
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  sbom:
+    name: Generate and sign SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate SBOM
+        run: npm run sbom
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          SBOM="ayoitson-$(node -p "require('./package.json').version").cdx.json"
+          cosign sign-blob --yes \
+            --output-signature "${SBOM}.sig" \
+            --output-certificate "${SBOM}.pem" \
+            "${SBOM}"
+
+      - name: Upload SBOM to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ayoitson-*.cdx.json
+            ayoitson-*.cdx.json.sig
+            ayoitson-*.cdx.json.pem

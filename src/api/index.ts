@@ -38,6 +38,7 @@ const guideModule = require('./guide');
 const healthModule = require('./health');
 const authModule = require('./auth');
 const apiKeysModule = require('./api-keys');
+const auditModule = require('./audit');
 const uploadModule = require('./upload');
 const versionModule = require('./version');
 const legacyCompatModule = require('./legacy-compat');
@@ -88,6 +89,7 @@ function compose(deps: any, options: { requireApiKey?: MiddlewareLike } = {}) {
   // Auth-gated resource routers. Each gets its own `requireApiKey` mount so a
   // future change can swap auth/scope/limits per resource without rewiring.
   router.use('/api/api-keys', requireApiKey, apiKeysModule.createRouter(deps));
+  router.use('/api/audit-log', requireApiKey, auditModule.createRouter(deps));
   router.use('/api/channels', requireApiKey, channelsModule.createRouter(deps));
   router.use(
     '/api/plex-servers',
@@ -124,6 +126,7 @@ module.exports = {
     health: healthModule,
     auth: authModule,
     apiKeys: apiKeysModule,
+    audit: auditModule,
     upload: uploadModule,
     version: versionModule,
     legacyCompat: legacyCompatModule,

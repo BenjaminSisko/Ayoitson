@@ -1,50 +1,89 @@
-# Ayoitson 1.5.5
+# Ayoitson
 
-Create live TV channel streams from media on your Plex servers.
+Ayoitson creates private live-TV style channels from Plex media. It publishes
+HDHomeRun-compatible discovery data plus M3U/XMLTV provider feeds so Plex,
+Jellyfin, Emby, and IPTV clients can tune channels from one local service.
 
-Ayoitson lets you build custom linear channels, publish them through an HDHomeRun-compatible tuner, and expose M3U/XMLTV outputs for IPTV clients. Fresh installs store runtime data in `.ayoitson/`, including the SQLite database and generated `xmltv.xml`.
+## Capabilities
 
-## Features
+- Build channels from Plex libraries, custom shows, filler, logos, and guide
+  metadata.
+- Stream channels through the browser, Plex DVR, HDHomeRun-style clients, or
+  M3U consumers.
+- Store runtime state in `.ayoitson/db.sqlite`, with encrypted Plex tokens and
+  migration support from legacy `.dizquetv` data.
+- Gate control-plane APIs with `X-API-Key`, helmet headers, rate limiting, and
+  deny-by-default CORS.
+- Run behind HTTP for private development or HTTPS by setting `HTTPS_CERT` and
+  `HTTPS_KEY`.
+- Generate CycloneDX SBOMs and signed release artifacts in CI.
 
-- Configure channels, programs, filler content, logos, playback behavior, and guide settings from the web UI.
-- Play channels through Plex, Jellyfin, Emby, or third-party IPTV players.
-- Mock an HDHomeRun tuner for DVR-style discovery while keeping the required Silicondust compatibility fields.
-- Use media across multiple Plex servers.
-- Generate M3U and XMLTV outputs for external clients.
-- Optionally transcode with FFmpeg, normalize audio/video, and support Nvidia hardware encoding in Docker.
-- Build packaged binaries for Windows, Linux, and macOS.
+## Quick Start
+
+```sh
+npm install
+npm run build
+npm start
+```
+
+Open `http://127.0.0.1:8000`.
+
+Fresh installs require a master API key:
+
+```sh
+node scripts/first-run.js
+```
+
+Copy the printed key once and use it in the setup UI or with API requests:
+
+```sh
+curl -H "X-API-Key: ayo_..." http://127.0.0.1:8000/api/channels
+```
 
 ## Runtime Data
 
-Ayoitson uses `.ayoitson/` by default. Set `AYOITSON_DATABASE=/path/to/data` to use a different data folder. The older `DATABASE` environment variable still works for one compatibility release and emits a deprecation warning.
+Ayoitson uses `.ayoitson/` by default. Set `AYOITSON_DATABASE=/path/to/data` to
+use another folder. The deprecated `DATABASE` environment variable still works
+for one compatibility release and logs a warning. The `--database` CLI flag has
+highest priority for one launch.
 
-The `--database` CLI flag remains supported and has the highest priority for a single launch.
+## HTTPS
+
+For local development with `mkcert`:
+
+```sh
+npm run tls:dev
+HTTPS_CERT=/path/to/localhost.pem HTTPS_KEY=/path/to/localhost-key.pem npm start
+```
+
+For production, place Ayoitson behind a trusted reverse proxy or provide a
+certificate/key pair directly with `HTTPS_CERT` and `HTTPS_KEY`.
+
+## Security And Release Checks
+
+```sh
+npm run lint
+npm test
+npm run audit
+npm run secret-scan
+npm run sbom
+```
+
+Release builds generate a CycloneDX SBOM and cosign keyless signatures for the
+SBOM and packaged binaries.
 
 ## Limitations
 
 - Plex DVR playback through the spoofed HDHomeRun tuner requires Plex Pass.
-- Ayoitson does not watch Plex libraries for media updates. Re-add affected programs after Plex media or server settings change.
-- Large video/audio format changes between episodes can break some players unless FFmpeg transcoding is enabled.
-- If Plex DVR is configured, Plex may continuously record or transcode channel content.
-- Ayoitson is intended for private network use. Do not expose its ports directly to untrusted users or the public internet.
+- Ayoitson does not watch Plex libraries for media updates.
+- Major format changes between episodes can require FFmpeg transcoding.
+- Ayoitson is intended for private networks or trusted reverse proxies. Do not
+  expose it directly to untrusted users.
 
-## Development
+## Attribution
 
-```sh
-npm run build
-npm run compile
-npm run package
-```
+Ayoitson is a fork of dizqueTV by vexorian
+(https://github.com/vexorian/dizquetv). dizqueTV is itself derived from
+pseudotv-plex. Ayoitson preserves upstream copyright notices in `LICENSE`.
 
-```sh
-npm run dev-client
-npm run dev-server
-```
-
-## License And Attribution
-
-- Ayoitson is a fork of [dizqueTV](https://github.com/vexorian/dizquetv) by Victor Hugo Soliz Kuncar.
-- Original pseudotv-Plex code was released under [MIT license (c) 2020 Dan Ferguson](https://github.com/DEFENDORe/pseudotv/blob/665e71e24ee5e93d9c9c90545addb53fdc235ff6/LICENSE).
-- dizqueTV's improvements are released under zlib license (c) 2020 Victor Hugo Soliz Kuncar.
-- FontAwesome: [https://fontawesome.com/license/free](https://archive.fo/PRqis)
-- Bootstrap: https://github.com/twbs/bootstrap/blob/v4.4.1/LICENSE
+Font Awesome and Bootstrap assets retain their own upstream licenses.

@@ -10,6 +10,13 @@ bin/
 !tests/fixtures/legacy-diskdb-baseline/.dizquetv/**
 web/public/bundle.js
 coverage/
+certs/
+*.sbom.json
+*.sbom.json.sig
+*.sbom.json.pem
+*.cdx.json
+*.cdx.json.sig
+*.cdx.json.pem
 *.orig
 package-lock.json
 Ayoitson-Obsidian-Vault/

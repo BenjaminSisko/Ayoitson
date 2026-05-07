@@ -19,12 +19,13 @@ const express = require('express');
 
 const { apiError } = require('../lib/errors');
 const apiKeyLib = require('../lib/api-keys');
+const { writeRequestAudit } = require('../lib/audit');
 const { asyncRoute } = require('./_helpers');
 
 const ALREADY_SETUP_CODE = 'CONFLICT';
 
 function createRouter(deps) {
-  const { apiKeyDb } = deps || {};
+  const { apiKeyDb, auditLogger } = deps || {};
   const router = express.Router();
 
   router.post(
@@ -52,6 +53,11 @@ function createRouter(deps) {
       }
       const name = (req.body && req.body.name) || 'master';
       const created = await apiKeyLib.createKey(apiKeyDb, name, ['*']);
+      writeRequestAudit(auditLogger, req, 'auth.key.created', {
+        setup: true,
+        keyId: created.metadata && created.metadata.id,
+        name: created.metadata && created.metadata.name,
+      });
       res.status(201).send(created);
     })
   );

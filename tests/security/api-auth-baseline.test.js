@@ -70,6 +70,7 @@ function mockDeps() {
       get: () => ({ ffmpegPath: 'ffmpeg' }),
       update: () => ({ ffmpeg: { ffmpegPath: 'ffmpeg' } }),
       reset: () => ({ ffmpegPath: 'ffmpeg' }),
+      getCurrentState: () => ({ ffmpegPath: 'ffmpeg' }),
     },
   };
 }
@@ -116,6 +117,8 @@ describe('Phase 4 API auth baseline', () => {
       ['get', '/api/api-keys'],
       ['post', '/api/api-keys'],
       ['delete', '/api/api-keys/fixture'],
+      ['get', '/api/audit-log'],
+      ['get', '/api/settings/ffmpeg/known-paths'],
     ];
 
     const failures = [];

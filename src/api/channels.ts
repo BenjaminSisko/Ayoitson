@@ -19,6 +19,7 @@
 const express = require('express');
 const JSONStream = require('JSONStream');
 
+const { writeRequestAudit } = require('../lib/audit');
 const throttle = require('../services/throttle');
 const { apiError, VALIDATION_ERROR, NOT_FOUND } = require('../lib/errors');
 const {
@@ -28,7 +29,7 @@ const {
 } = require('./_helpers');
 
 function createRouter(deps) {
-  const { channelService } = deps;
+  const { channelService, auditLogger } = deps;
   if (!channelService) {
     throw new Error('createRouter(channels): channelService is required');
   }
@@ -147,6 +148,10 @@ function createRouter(deps) {
         });
       }
       await channelService.saveChannel(number, body);
+      writeRequestAudit(auditLogger, req, 'channel.created', {
+        number,
+        name: body.name,
+      });
       res.status(201).send({ number });
     })
   );
@@ -160,6 +165,10 @@ function createRouter(deps) {
       // The body may carry its own `number` (legacy clients); we accept it but
       // the path parameter is authoritative.
       await channelService.saveChannel(number, { ...body, number });
+      writeRequestAudit(auditLogger, req, 'channel.updated', {
+        number,
+        name: body.name,
+      });
       res.send({ number });
     })
   );
@@ -170,6 +179,7 @@ function createRouter(deps) {
       const number = parsePositiveInt(req.params.number);
       if (number == null) return missingPathParam(res, 'number');
       await channelService.deleteChannel(number);
+      writeRequestAudit(auditLogger, req, 'channel.deleted', { number });
       res.send({ deleted: true, number });
     })
   );
