@@ -84,6 +84,8 @@ SBOM and packaged binaries.
 
 Ayoitson is a fork of dizqueTV by vexorian
 (https://github.com/vexorian/dizquetv). dizqueTV is itself derived from
-pseudotv-plex. Ayoitson preserves upstream copyright notices in `LICENSE`.
+pseudotv-plex. Ayoitson is an altered source version and preserves upstream
+copyright notices in `LICENSE`.
 
-Font Awesome and Bootstrap assets retain their own upstream licenses.
+The project ships under the zlib license. Font Awesome and Bootstrap assets
+retain their own upstream licenses.

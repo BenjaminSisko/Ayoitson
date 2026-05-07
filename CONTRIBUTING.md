@@ -41,6 +41,6 @@ development-only values.
 
 ## License
 
-Ayoitson modifications are GPL-2.0-or-later. Preserve all upstream copyright
-and attribution notices when editing files derived from dizqueTV or
-pseudotv-plex.
+Ayoitson ships under the zlib license, matching upstream dizqueTV. Preserve all
+upstream copyright and attribution notices when editing files derived from
+dizqueTV or pseudotv-plex, and keep altered source versions plainly marked.

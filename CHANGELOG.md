@@ -17,8 +17,8 @@ All notable Ayoitson changes are tracked here.
   `i18next-fs-backend`, and `unzipper`.
 - Replaced the vulnerable `node-ssdp` dependency with a local minimal SSDP
   responder.
-- Updated package/license metadata to `GPL-2.0-or-later` while preserving
-  upstream dizqueTV/pseudotv-plex notices.
+- Confirmed zlib package/license metadata while preserving upstream
+  dizqueTV/pseudotv-plex notices.
 
 ### Security
 

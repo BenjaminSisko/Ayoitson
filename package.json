@@ -35,7 +35,7 @@
     "dev": "node scripts/dev.js"
   },
   "author": "vexorian",
-  "license": "GPL-2.0-or-later",
+  "license": "Zlib",
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
