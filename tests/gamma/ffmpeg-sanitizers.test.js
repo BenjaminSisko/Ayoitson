@@ -43,8 +43,8 @@ describe('Lane Gamma Phase 4 FFmpeg sanitizers', () => {
   });
 
   test('stream text overlays use drawtext textfile instead of inline text', () => {
-    const ffmpegSource = source('src/ffmpeg.js');
-    const ffmpegTextSource = source('src/ffmpegText.js');
+    const ffmpegSource = source('src/ffmpeg.ts');
+    const ffmpegTextSource = source('src/ffmpegText.ts');
 
     expect(ffmpegSource).toContain('textfile=');
     expect(ffmpegTextSource).toContain('textfile=');

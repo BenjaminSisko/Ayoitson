@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /******************
  * Offline player is for special screens, like the error
  * screen or the Flex Fallback screen.

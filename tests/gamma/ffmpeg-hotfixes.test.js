@@ -6,13 +6,13 @@ const source = (file) =>
 
 describe('Lane Gamma Phase 1 FFmpeg hot-fixes', () => {
   test('ffmpeg-info probes version with execFile instead of shell exec', () => {
-    const ffmpegInfoSource = source('src/ffmpeg-info.js');
+    const ffmpegInfoSource = source('src/ffmpeg-info.ts');
 
     expect(ffmpegInfoSource).toContain(
       "const execFile = require('child_process').execFile;"
     );
-    expect(ffmpegInfoSource).toContain(
-      "execFile(this.ffmpegPath, ['-version']"
+    expect(ffmpegInfoSource).toMatch(
+      /execFile\(\s*this\.ffmpegPath,\s*\['-version'\]/
     );
     expect(ffmpegInfoSource).not.toMatch(
       /require\(['"]child_process['"]\)\.exec\b/
@@ -21,7 +21,7 @@ describe('Lane Gamma Phase 1 FFmpeg hot-fixes', () => {
   });
 
   test('concat protocol whitelist excludes local file access', () => {
-    const ffmpegSource = source('src/ffmpeg.js');
+    const ffmpegSource = source('src/ffmpeg.ts');
     const whitelistMatch = ffmpegSource.match(
       /['"`]-protocol_whitelist['"`],\s*['"`]([^'"`]+)['"`]/
     );
@@ -31,7 +31,7 @@ describe('Lane Gamma Phase 1 FFmpeg hot-fixes', () => {
   });
 
   test('stream response close errors are logged instead of swallowed', () => {
-    const videoSource = source('src/video.js');
+    const videoSource = source('src/video.ts');
 
     expect(videoSource).toContain(
       "console.warn('Unable to end stream response cleanly', err);"
@@ -40,11 +40,11 @@ describe('Lane Gamma Phase 1 FFmpeg hot-fixes', () => {
   });
 
   test('in-scope streaming localhost URLs use Alpha internal URL helper', () => {
-    const ffmpegSource = source('src/ffmpeg.js');
-    const offlinePlayerSource = source('src/offline-player.js');
+    const ffmpegSource = source('src/ffmpeg.ts');
+    const offlinePlayerSource = source('src/offline-player.ts');
     const plexPlayerSource = source('src/plex-player.js');
-    const plexTranscoderSource = source('src/plexTranscoder.js');
-    const videoSource = source('src/video.js');
+    const plexTranscoderSource = source('src/plexTranscoder.ts');
+    const videoSource = source('src/video.ts');
 
     expect(ffmpegSource).toContain(
       "const { getInternalBaseUrl } = require('./lib/url')"

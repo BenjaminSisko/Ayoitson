@@ -1,6 +1,9 @@
-const spawn = require('child_process').spawn;
 const events = require('events');
 const { getInternalBaseUrl } = require('./lib/url');
+const {
+  spawnFfmpeg,
+  toSafeFfmpegArgs,
+}: typeof import('./lib/ffmpeg-args') = require('./lib/ffmpeg-args');
 const {
   cleanupDrawtextFiles,
   createDrawtextFile,
@@ -16,7 +19,24 @@ function getDatabaseDir() {
 }
 
 class FFMPEG extends events.EventEmitter {
-  constructor(opts, channel) {
+  opts: any;
+  errorPicturePath: string;
+  ffmpegName: string;
+  channel: any;
+  ffmpegPath: string;
+  wantedW: number;
+  wantedH: number;
+  sentData: boolean;
+  apad: boolean;
+  audioChannelsSampleRate: boolean;
+  ensureResolution: boolean;
+  volumePercent: number;
+  hasBeenKilled: boolean;
+  audioOnly: boolean;
+  ffmpeg: any;
+  alignAudio: boolean | undefined;
+
+  constructor(opts: any, channel: any) {
     super();
     this.opts = opts;
     this.errorPicturePath = `${getInternalBaseUrl()}/images/generic-error-screen.png`;
@@ -75,10 +95,10 @@ class FFMPEG extends events.EventEmitter {
     this.hasBeenKilled = false;
     this.audioOnly = false;
   }
-  setAudioOnly(audioOnly) {
+  setAudioOnly(audioOnly: boolean) {
     this.audioOnly = audioOnly;
   }
-  async spawnConcat(streamUrl) {
+  async spawnConcat(streamUrl: any) {
     return await this.spawn(
       streamUrl,
       undefined,
@@ -91,12 +111,12 @@ class FFMPEG extends events.EventEmitter {
     );
   }
   async spawnStream(
-    streamUrl,
-    streamStats,
-    startTime,
-    duration,
-    enableIcon,
-    type
+    streamUrl: any,
+    streamStats: any,
+    startTime: any,
+    duration: any,
+    enableIcon: any,
+    type: any
   ) {
     return await this.spawn(
       streamUrl,
@@ -109,7 +129,7 @@ class FFMPEG extends events.EventEmitter {
       false
     );
   }
-  async spawnError(title, subtitle, duration) {
+  async spawnError(title: string, subtitle: string, duration: any) {
     if (!this.opts.enableFFMPEGTranscoding || this.opts.errorScreen == 'kill') {
       console.error('error: ' + title + ' ; ' + subtitle);
       this.emit('error', {
@@ -140,7 +160,7 @@ class FFMPEG extends events.EventEmitter {
       false
     );
   }
-  async spawnOffline(duration) {
+  async spawnOffline(duration: any) {
     if (!this.opts.enableFFMPEGTranscoding) {
       console.log(
         'The channel has an offline period scheduled for this time slot. FFMPEG transcoding is disabled, so it is not possible to render an offline screen. Ending the stream instead'
@@ -166,14 +186,14 @@ class FFMPEG extends events.EventEmitter {
     );
   }
   async spawn(
-    streamUrl,
-    streamStats,
-    startTime,
-    duration,
-    limitRead,
-    watermark,
-    type,
-    isConcatPlaylist
+    streamUrl: any,
+    streamStats: any,
+    startTime: any,
+    duration: any,
+    limitRead: any,
+    watermark: any,
+    type: any,
+    isConcatPlaylist: any
   ) {
     let ffmpegArgs = [
       `-threads`,
@@ -182,7 +202,7 @@ class FFMPEG extends events.EventEmitter {
       `+genpts+discardcorrupt+igndts`,
     ];
     let stillImage = false;
-    let drawtextFiles = [];
+    let drawtextFiles: string[] = [];
     const cleanupDrawtext = () => cleanupDrawtextFiles(drawtextFiles);
 
     if (
@@ -466,7 +486,7 @@ class FFMPEG extends events.EventEmitter {
         var horz = Math.round((mpHorz * iW) / 100.0);
         var vert = Math.round((mpVert * iH) / 100.0);
 
-        let posAry = {
+        let posAry: Record<string, string> = {
           'top-left': `x=${horz}:y=${vert}`,
           'top-right': `x=W-w-${horz}:y=${vert}`,
           'bottom-left': `x=${horz}:y=H-h-${vert}`,
@@ -671,7 +691,8 @@ class FFMPEG extends events.EventEmitter {
       return;
     }
     //console.log(this.ffmpegPath + " " + ffmpegArgs.join(" ") );
-    this.ffmpeg = spawn(this.ffmpegPath, ffmpegArgs, {
+    const safeFfmpegArgs = toSafeFfmpegArgs(ffmpegArgs);
+    this.ffmpeg = spawnFfmpeg(this.ffmpegPath, safeFfmpegArgs, {
       stdio: ['ignore', 'pipe', doLogs ? process.stderr : 'ignore'],
     });
     if (this.hasBeenKilled) {
@@ -682,13 +703,13 @@ class FFMPEG extends events.EventEmitter {
 
     this.ffmpegName = isConcatPlaylist ? 'Concat FFMPEG' : 'Stream FFMPEG';
 
-    this.ffmpeg.on('error', (code, signal) => {
+    this.ffmpeg.on('error', (code: unknown, signal: unknown) => {
       cleanupDrawtext();
       console.log(
         `${this.ffmpegName} received error event: ${code}, ${signal}`
       );
     });
-    this.ffmpeg.on('exit', (code, signal) => {
+    this.ffmpeg.on('exit', (code: number | null, signal: string | null) => {
       cleanupDrawtext();
       if (code === null) {
         if (!this.hasBeenKilled) {
@@ -711,7 +732,7 @@ class FFMPEG extends events.EventEmitter {
         if (!this.sentData) {
           this.emit('error', {
             code: code,
-            cmd: formatFfmpegCommand(this.opts.ffmpegPath, ffmpegArgs),
+            cmd: formatFfmpegCommand(this.opts.ffmpegPath, safeFfmpegArgs),
           });
         }
         console.log(`${this.ffmpegName} exited with code 255.`);
@@ -720,7 +741,7 @@ class FFMPEG extends events.EventEmitter {
         console.log(`${this.ffmpegName} exited with code ${code}.`);
         this.emit('error', {
           code: code,
-          cmd: formatFfmpegCommand(this.opts.ffmpegPath, ffmpegArgs),
+          cmd: formatFfmpegCommand(this.opts.ffmpegPath, safeFfmpegArgs),
         });
       }
     });
@@ -737,7 +758,7 @@ class FFMPEG extends events.EventEmitter {
   }
 }
 
-function isDifferentVideoCodec(codec, encoder) {
+function isDifferentVideoCodec(codec: string, encoder: string) {
   if (codec == 'mpeg2video') {
     return !encoder.includes('mpeg2');
   } else if (codec == 'h264') {
@@ -749,7 +770,7 @@ function isDifferentVideoCodec(codec, encoder) {
   return true;
 }
 
-function isDifferentAudioCodec(codec, encoder) {
+function isDifferentAudioCodec(codec: string, encoder: string) {
   if (codec == 'mp3') {
     return !(encoder.includes('mp3') || encoder.includes('lame'));
   } else if (codec == 'aac') {
@@ -763,11 +784,16 @@ function isDifferentAudioCodec(codec, encoder) {
   return true;
 }
 
-function isLargerResolution(w1, h1, w2, h2) {
+function isLargerResolution(w1: number, h1: number, w2: number, h2: number) {
   return w1 > w2 || h1 > h2 || w1 % 2 == 1 || h1 % 2 == 1;
 }
 
-function resolveOutputResolution(sourceW, sourceH, wantedW, wantedH) {
+function resolveOutputResolution(
+  sourceW: number,
+  sourceH: number,
+  wantedW: number,
+  wantedH: number
+) {
   if (sourceW > wantedW || sourceH > wantedH) {
     return { w: wantedW, h: wantedH };
   }
@@ -778,7 +804,7 @@ function resolveOutputResolution(sourceW, sourceH, wantedW, wantedH) {
   };
 }
 
-function parseResolutionString(s) {
+function parseResolutionString(s: string) {
   var i = s.indexOf('x');
   if (i == -1) {
     i = s.indexOf('×');
@@ -792,7 +818,7 @@ function parseResolutionString(s) {
   };
 }
 
-function gcd(a, b) {
+function gcd(a: number, b: number) {
   while (b != 0) {
     let c = b;
     b = a % b;
@@ -801,7 +827,7 @@ function gcd(a, b) {
   return a;
 }
 
-function normalizeFfmpegInput(input) {
+function normalizeFfmpegInput(input: any) {
   if (input && typeof input === 'object' && typeof input.url === 'string') {
     return {
       url: input.url,
@@ -814,7 +840,7 @@ function normalizeFfmpegInput(input) {
   };
 }
 
-function pushFfmpegInput(args, input) {
+function pushFfmpegInput(args: Array<string | number | boolean>, input: any) {
   const normalized = normalizeFfmpegInput(input);
   const headers = formatFfmpegHeaders(normalized.headers);
   if (headers !== '') {
@@ -823,7 +849,7 @@ function pushFfmpegInput(args, input) {
   args.push('-i', normalized.url);
 }
 
-function formatFfmpegHeaders(headers) {
+function formatFfmpegHeaders(headers: Record<string, unknown>) {
   const entries = Object.entries(headers || {}).filter(
     ([, value]) => typeof value !== 'undefined' && value !== null
   );
@@ -835,11 +861,14 @@ function formatFfmpegHeaders(headers) {
   );
 }
 
-function formatFfmpegCommand(ffmpegPath, args) {
+function formatFfmpegCommand(
+  ffmpegPath: string,
+  args: ReadonlyArray<string | number | boolean>
+) {
   return `${ffmpegPath} ${redactFfmpegArgs(args).join(' ')}`;
 }
 
-function redactFfmpegArgs(args) {
+function redactFfmpegArgs(args: ReadonlyArray<string | number | boolean>) {
   return args.map((arg, index) => {
     if (args[index - 1] === '-headers') {
       return `${arg}`.replace(/(X-Plex-Token:\s*)[^\r\n]+/gi, '$1[redacted]');

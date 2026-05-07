@@ -4,7 +4,7 @@ const path = require('path');
 describe('stream fallback cleanup ownership', () => {
   test('fallback FFmpeg replacement remains owned by player cleanup', () => {
     const offlinePlayer = fs.readFileSync(
-      path.join(__dirname, '../../src/offline-player.js'),
+      path.join(__dirname, '../../src/offline-player.ts'),
       'utf8'
     );
     const plexPlayer = fs.readFileSync(

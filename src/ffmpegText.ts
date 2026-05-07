@@ -1,5 +1,8 @@
-const spawn = require('child_process').spawn;
 const events = require('events');
+const {
+  spawnFfmpeg,
+  toSafeFfmpegArgs,
+}: typeof import('./lib/ffmpeg-args') = require('./lib/ffmpeg-args');
 const {
   cleanupDrawtextFiles,
   createDrawtextFile,
@@ -11,13 +14,17 @@ function getDatabaseDir() {
 }
 
 class FFMPEG_TEXT extends events.EventEmitter {
-  constructor(opts, title, subtitle) {
+  drawtextFiles: string[];
+  args: import('./lib/ffmpeg-args').SafeFFmpegArg[];
+  ffmpeg: any;
+
+  constructor(opts: any, title: string, subtitle: string) {
     super();
     this.drawtextFiles = [
       createDrawtextFile(title),
       createDrawtextFile(subtitle),
     ];
-    this.args = [
+    this.args = toSafeFfmpegArgs([
       '-threads',
       opts.threads,
       '-f',
@@ -40,16 +47,16 @@ class FFMPEG_TEXT extends events.EventEmitter {
       '-f',
       'mpegts',
       'pipe:1',
-    ];
+    ]);
 
-    this.ffmpeg = spawn(opts.ffmpegPath, this.args);
+    this.ffmpeg = spawnFfmpeg(opts.ffmpegPath, this.args);
 
-    this.ffmpeg.stdout.on('data', (chunk) => {
+    this.ffmpeg.stdout.on('data', (chunk: Buffer) => {
       this.emit('data', chunk);
     });
 
     if (opts.logFfmpeg) {
-      this.ffmpeg.stderr.on('data', (chunk) => {
+      this.ffmpeg.stderr.on('data', (chunk: Buffer) => {
         process.stderr.write(chunk);
       });
     }
@@ -58,7 +65,7 @@ class FFMPEG_TEXT extends events.EventEmitter {
       this.cleanupDrawtextFiles();
     });
 
-    this.ffmpeg.on('close', (code) => {
+    this.ffmpeg.on('close', (code: number | null) => {
       this.cleanupDrawtextFiles();
       if (code === null) this.emit('close', code);
       else if (code === 0) this.emit('close', code);

@@ -3,7 +3,13 @@ const path = require('path');
 
 const FFMPEG_PATH_PATTERN = /^[A-Za-z0-9_./-]+$/;
 
-function validateFFmpegPath(input) {
+type FFmpegPathValidationResult = {
+  ok: boolean;
+  error?: string;
+  path?: string;
+};
+
+function validateFFmpegPath(input: unknown): FFmpegPathValidationResult {
   if (typeof input !== 'string' || input.length === 0) {
     return {
       ok: false,
@@ -34,7 +40,12 @@ function validateFFmpegPath(input) {
       path: normalizedPath,
     };
   } catch (err) {
-    if (err.code === 'ENOENT') {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code === 'ENOENT'
+    ) {
       return {
         ok: false,
         error: 'ffmpeg path does not exist.',
@@ -48,3 +59,5 @@ module.exports = {
   FFMPEG_PATH_PATTERN,
   validateFFmpegPath,
 };
+
+export { FFMPEG_PATH_PATTERN, validateFFmpegPath };

@@ -119,10 +119,13 @@ export default [
       },
       globals: {
         Buffer: 'readonly',
+        AbortController: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
         clearInterval: 'readonly',
         clearTimeout: 'readonly',
         console: 'readonly',
+        global: 'readonly',
         module: 'writable',
         process: 'readonly',
         require: 'readonly',
@@ -134,13 +137,6 @@ export default [
     },
     rules: {
       'no-restricted-syntax': ['error', ...noExecSelectors],
-    },
-  },
-  {
-    files: ['src/ffmpeg-info.js'],
-    rules: {
-      // Tracked as F3; Lane Gamma owns the Phase 1 exec -> execFile hot-fix.
-      'no-restricted-syntax': 'off',
     },
   },
   {

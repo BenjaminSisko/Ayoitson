@@ -11,19 +11,26 @@ const BLOCKED_SCHEMES = new Set([
 ]);
 
 class WatermarkValidationError extends Error {
-  constructor(message, details = {}) {
+  details: Record<string, unknown>;
+
+  constructor(message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'WatermarkValidationError';
     this.details = details;
   }
 }
 
-async function validateWatermarkUrl(input, options = {}) {
+async function validateWatermarkUrl(
+  input: unknown,
+  options: Record<string, any> = {}
+): Promise<string> {
   const raw = String(input ?? '').trim();
-  const scheme = raw.match(/^([A-Za-z][A-Za-z0-9+.-]*):/);
-  if (scheme && BLOCKED_SCHEMES.has(`${scheme[1].toLowerCase()}:`)) {
+  const schemeName = raw
+    .match(/^([A-Za-z][A-Za-z0-9+.-]*):/)?.[1]
+    ?.toLowerCase();
+  if (schemeName && BLOCKED_SCHEMES.has(`${schemeName}:`)) {
     throw new WatermarkValidationError(
-      `Blocked watermark URL scheme: ${scheme[1].toLowerCase()}:`
+      `Blocked watermark URL scheme: ${schemeName}:`
     );
   }
 
@@ -49,7 +56,10 @@ async function validateWatermarkUrl(input, options = {}) {
   return url.toString();
 }
 
-async function validateWatermark(watermark, options = {}) {
+async function validateWatermark(
+  watermark: { url?: unknown } | null | undefined,
+  options: Record<string, any> = {}
+): Promise<string | null> {
   if (!watermark || !watermark.url) {
     return null;
   }
@@ -57,7 +67,10 @@ async function validateWatermark(watermark, options = {}) {
   return validateWatermarkUrl(watermark.url, options);
 }
 
-async function rejectPrivateHost(url, options = {}) {
+async function rejectPrivateHost(
+  url: URL,
+  options: Record<string, any> = {}
+): Promise<void> {
   const addresses = await resolveHost(url.hostname, options);
   for (const address of addresses) {
     if (isPrivateAddress(address.address)) {
@@ -69,7 +82,10 @@ async function rejectPrivateHost(url, options = {}) {
   }
 }
 
-async function resolveHost(hostname, options = {}) {
+async function resolveHost(
+  hostname: string,
+  options: Record<string, any> = {}
+): Promise<Array<{ address: string; family: number }>> {
   const normalizedHostname = hostname.replace(/^\[|\]$/g, '');
   if (net.isIP(normalizedHostname)) {
     return [
@@ -78,11 +94,11 @@ async function resolveHost(hostname, options = {}) {
   }
 
   const resolve =
-    options.resolveHost || ((host) => dns.lookup(host, { all: true }));
+    options.resolveHost || ((host: string) => dns.lookup(host, { all: true }));
   const addresses = await resolve(normalizedHostname);
   const normalized = Array.isArray(addresses) ? addresses : [addresses];
 
-  return normalized.map((entry) => {
+  return normalized.map((entry: any) => {
     if (typeof entry === 'string') {
       return { address: entry, family: net.isIP(entry) };
     }
@@ -90,7 +106,10 @@ async function resolveHost(hostname, options = {}) {
   });
 }
 
-async function assertReachable(url, options = {}) {
+async function assertReachable(
+  url: URL,
+  options: Record<string, any> = {}
+): Promise<void> {
   const fetchImpl = options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== 'function') {
     throw new WatermarkValidationError(
@@ -128,11 +147,13 @@ async function assertReachable(url, options = {}) {
   }
 }
 
-function isPrivateAddress(address) {
+function isPrivateAddress(address: string): boolean {
   const family = net.isIP(address);
   if (family === 4) {
     const parts = address.split('.').map((part) => Number(part));
-    const [a, b] = parts;
+    const a = parts[0] ?? 0;
+    const b = parts[1] ?? 0;
+    const c = parts[2] ?? 0;
     return (
       a === 0 ||
       a === 10 ||
@@ -141,11 +162,11 @@ function isPrivateAddress(address) {
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
-      (a === 192 && b === 0 && parts[2] === 0) ||
-      (a === 192 && b === 0 && parts[2] === 2) ||
+      (a === 192 && b === 0 && c === 0) ||
+      (a === 192 && b === 0 && c === 2) ||
       (a === 198 && (b === 18 || b === 19)) ||
-      (a === 198 && b === 51 && parts[2] === 100) ||
-      (a === 203 && b === 0 && parts[2] === 113) ||
+      (a === 198 && b === 51 && c === 100) ||
+      (a === 203 && b === 0 && c === 113) ||
       a >= 224
     );
   }

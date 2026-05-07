@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const { httpGet, httpPost } = require('./lib/http');
