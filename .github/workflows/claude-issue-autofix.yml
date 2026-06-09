@@ -112,11 +112,12 @@ jobs:
             ISSUE_TITLE="$(gh issue view "${ISSUE_NUMBER}" --json title --jq '.title')"
           fi
 
-          pr_url="$(gh pr create             --head "${branch}"             --base "${BASE_BRANCH}"             --title "Fix #${ISSUE_NUMBER}: ${ISSUE_TITLE}"             --body "Fixes #${ISSUE_NUMBER}
-
-This PR was opened automatically after Claude pushed \`${branch}\`.
-
-Review before merge.")"
+          pr_body="$(printf 'Fixes #%s\n\nThis PR was opened automatically after Claude pushed `%s`.\n\nReview before merge.' "${ISSUE_NUMBER}" "${branch}")"
+          pr_url="$(gh pr create \
+            --head "${branch}" \
+            --base "${BASE_BRANCH}" \
+            --title "Fix #${ISSUE_NUMBER}: ${ISSUE_TITLE}" \
+            --body "${pr_body}")"
 
           gh issue comment "${ISSUE_NUMBER}" --body "Opened PR for Claude's branch: ${pr_url}"
           echo "Opened ${pr_url}"
