@@ -58,9 +58,11 @@ jobs:
             2. Inspect the issue and the codebase.
             3. If the issue is actionable and safe, implement the smallest high-quality fix.
             4. Run the most relevant available tests or validation commands.
-            5. Create a branch named claude/issue-${{ github.event.issue.number || inputs.issue_number }}-fix, commit the change, push it, and open a pull request against the default branch.
-            6. Link the PR to the issue with `Fixes #${{ github.event.issue.number || inputs.issue_number }}` when the fix is intended to close it.
-            7. Comment on the issue with the PR link, a short summary, and the tests run.
+            5. Commit and push your changes to the Claude branch prepared for you by the action.
+            6. Include `Fixes #${{ github.event.issue.number || inputs.issue_number }}` in your final PR body suggestion when the fix is intended to close it.
+            7. Comment on the issue with a short summary and tests run.
+
+            After your branch is pushed, the workflow will automatically open the pull request for you. Do not push directly to the default branch.
 
             If the issue is not actionable, unsafe, too broad, missing required context, or should not be changed automatically, do not make code changes. Instead, comment on the issue with a concise blocker summary and exactly what information is needed.
 
@@ -70,7 +72,51 @@ jobs:
             - Do not make destructive changes.
             - Keep changes scoped to the issue.
             - Preserve user work and repository conventions.
-            - If tests cannot be run, say why in the PR and issue comment.
+            - If tests cannot be run, say why in the issue comment.
           claude_args: |
             --max-turns 20
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash"
+
+      - name: Open pull request for Claude branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ISSUE_NUMBER}" ]; then
+            echo "No issue number supplied; skipping PR creation."
+            exit 0
+          fi
+
+          branch="$(git ls-remote --heads origin "claude/issue-${ISSUE_NUMBER}-*" | awk '{print $2}' | sed 's#refs/heads/##' | sort | tail -n 1)"
+          if [ -z "${branch}" ]; then
+            echo "No Claude branch found for issue ${ISSUE_NUMBER}; skipping PR creation."
+            exit 0
+          fi
+
+          existing_pr="$(gh pr list --head "${branch}" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "${existing_pr}" ]; then
+            echo "PR already open for ${branch}: #${existing_pr}"
+            exit 0
+          fi
+
+          compare_status="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${BASE_BRANCH}...${branch}" --jq '.status')"
+          if [ "${compare_status}" = "identical" ]; then
+            echo "Claude branch ${branch} has no diff against ${BASE_BRANCH}; skipping PR creation."
+            exit 0
+          fi
+
+          if [ -z "${ISSUE_TITLE}" ]; then
+            ISSUE_TITLE="$(gh issue view "${ISSUE_NUMBER}" --json title --jq '.title')"
+          fi
+
+          pr_url="$(gh pr create             --head "${branch}"             --base "${BASE_BRANCH}"             --title "Fix #${ISSUE_NUMBER}: ${ISSUE_TITLE}"             --body "Fixes #${ISSUE_NUMBER}
+
+This PR was opened automatically after Claude pushed \`${branch}\`.
+
+Review before merge.")"
+
+          gh issue comment "${ISSUE_NUMBER}" --body "Opened PR for Claude's branch: ${pr_url}"
+          echo "Opened ${pr_url}"
