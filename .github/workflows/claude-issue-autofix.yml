@@ -90,7 +90,7 @@ jobs:
             exit 0
           fi
 
-          branch="$(git ls-remote --heads origin "claude/issue-${ISSUE_NUMBER}-*" | awk '{print $2}' | sed 's#refs/heads/##' | sort | tail -n 1)"
+          branch="$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/heads/claude/issue-${ISSUE_NUMBER}-" --jq '.[].ref' | sed 's#^refs/heads/##' | sort | tail -n 1)"
           if [ -z "${branch}" ]; then
             echo "No Claude branch found for issue ${ISSUE_NUMBER}; skipping PR creation."
             exit 0
